@@ -1,0 +1,213 @@
+{
+  "entities": {
+    "Provenderie": {
+      "title": "Provenderie",
+      "description": "Represents a company or business unit.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "identifier": { "type": "string" },
+        "primaryAdminId": { "type": "string" },
+        "address": { "type": "string" },
+        "phones": { "type": "array", "items": { "type": "string" } },
+        "legalRC": { "type": "string" },
+        "legalNIU": { "type": "string" },
+        "licenseEnforced": { "type": "boolean" },
+        "licenseExpiryDate": { "type": "string" },
+        "licenseType": { "type": "string" },
+        "deleted": { "type": "boolean" }
+      },
+      "required": ["id", "name", "identifier"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "Represents a client of the business.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "address": { "type": "string" },
+        "advanceBalance": { "type": "number" },
+        "outstandingDebt": { "type": "number" },
+        "provenderieId": { "type": "string" },
+        "deleted": { "type": "boolean" }
+      },
+      "required": ["id", "name", "provenderieId"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Represents an item in inventory.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "price": { "type": "number" },
+        "wholesalePrice": { "type": "number" },
+        "costPrice": { "type": "number" },
+        "stock": { "type": "number" },
+        "unit": { "type": "string" },
+        "provenderieId": { "type": "string" },
+        "deleted": { "type": "boolean" }
+      },
+      "required": ["id", "name", "category", "price", "provenderieId"]
+    },
+    "Invoice": {
+      "title": "Invoice",
+      "description": "Represents a sales transaction.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "customerName": { "type": "string" },
+        "total": { "type": "number" },
+        "amountPaid": { "type": "number" },
+        "status": { "type": "string" },
+        "provenderieId": { "type": "string" },
+        "deleted": { "type": "boolean" }
+      },
+      "required": ["id", "date", "customerName", "total", "provenderieId"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Represents a business expenditure.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "category": { "type": "string" },
+        "amount": { "type": "number" },
+        "description": { "type": "string" },
+        "provenderieId": { "type": "string" },
+        "deleted": { "type": "boolean" }
+      },
+      "required": ["id", "date", "category", "amount", "provenderieId"]
+    },
+    "Employee": {
+      "title": "Employee",
+      "description": "Represents a staff member.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "roleId": { "type": "string" },
+        "roleIds": { "type": "array", "items": { "type": "string" } },
+        "roles": { "type": "array", "items": { "type": "string" } },
+        "email": { "type": "string" },
+        "isOnline": { "type": "boolean" },
+        "lastActive": { "type": "string" },
+        "provenderieId": { "type": "string" },
+        "deleted": { "type": "boolean" }
+      },
+      "required": ["id", "name", "role", "provenderieId"]
+    },
+    "UserRole": {
+      "title": "UserRole",
+      "description": "Defines access permissions.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "permissions": { "type": "array", "items": { "type": "string" } },
+        "provenderieId": { "type": "string" },
+        "deleted": { "type": "boolean" }
+      },
+      "required": ["id", "name", "provenderieId"]
+    },
+    "Boutique": {
+      "title": "Boutique",
+      "description": "Represents a physical store location.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "status": { "type": "string" },
+        "openStatus": { "type": "string" },
+        "lastOpenedAt": { "type": "string" },
+        "lastClosedAt": { "type": "string" },
+        "openedBy": { "type": "string" },
+        "closedBy": { "type": "string" },
+        "provenderieId": { "type": "string" },
+        "deleted": { "type": "boolean" }
+      },
+      "required": ["id", "name", "status", "provenderieId"]
+    },
+    "StockTransfer": {
+      "title": "StockTransfer",
+      "description": "Represents movement of stock between boutiques.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "reference": { "type": "string" },
+        "date": { "type": "string" },
+        "sourceBoutique": { "type": "string" },
+        "destinationBoutique": { "type": "string" },
+        "items": { "type": "array" },
+        "status": { "type": "string" },
+        "provenderieId": { "type": "string" },
+        "deleted": { "type": "boolean" }
+      },
+      "required": ["id", "reference", "date", "sourceBoutique", "destinationBoutique", "provenderieId"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "AI Assistant chat history.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "messages": { "type": "array" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" },
+        "deleted": { "type": "boolean" }
+      },
+      "required": ["id", "title", "messages", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/provenderies/{provenderieId}": {
+      "schema": "Provenderie",
+      "description": "List of companies."
+    },
+    "/customers/{customerId}": {
+      "schema": "Customer",
+      "description": "List of clients for a company."
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Inventory management."
+    },
+    "/invoices/{invoiceId}": {
+      "schema": "Invoice",
+      "description": "Sales records."
+    },
+    "/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "Business expenses."
+    },
+    "/employees/{employeeId}": {
+      "schema": "Employee",
+      "description": "Staff and user profiles."
+    },
+    "/roles/{roleId}": {
+      "schema": "UserRole",
+      "description": "Access control roles."
+    },
+    "/boutiques/{boutiqueId}": {
+      "schema": "Boutique",
+      "description": "Store locations."
+    },
+    "/transfers/{transferId}": {
+      "schema": "StockTransfer",
+      "description": "Inter-boutique transfers."
+    },
+    "/conversations/{conversationId}": {
+      "schema": "Conversation",
+      "description": "AI chat history."
+    }
+  }
+}

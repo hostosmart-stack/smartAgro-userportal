@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Remix: Remix: Remix: Remix: Remix: smart-agro-real-v1",
+  "description": "Système de gestion complet pour provenderies et magasins agricoles. Gestion de stock, facturation et analyse des ventes pour volailles, bétail et équipements.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

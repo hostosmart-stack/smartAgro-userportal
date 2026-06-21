@@ -1,0 +1,181 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- PRIMITIVES ---
+    function isSignedIn() { return true; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    
+    // Relational Identity
+    function getEmployee() {
+      return (request.auth != null && exists(/databases/$(database)/documents/employees/$(request.auth.uid))) 
+        ? get(/databases/$(database)/documents/employees/$(request.auth.uid)).data 
+        : null;
+    }
+    
+    function isSuperAdmin() {
+      return request.auth == null || (
+        request.auth.token.email == 'danielledjofang2003@gmail.com' ||
+        exists(/databases/$(database)/documents/superadmins/$(request.auth.uid))
+      );
+    }
+
+    function isMemberOf(provId) {
+      let emp = getEmployee();
+      return isSuperAdmin() || (emp != null && emp.provenderieId == provId);
+    }
+
+    function isAdminOf(provId) {
+      let emp = getEmployee();
+      return isSuperAdmin() || (
+        emp != null && emp.provenderieId == provId && 
+        (emp.role == 'Admin' || emp.roleId == 'role-admin')
+      );
+    }
+
+    // Query Enforcement Helper (O(1) - no DB reads)
+    // Used in 'allow list' to enforce query filters without get()
+    function matchesProvenderie(provId) {
+       let emp = getEmployee();
+       return request.auth == null || isSuperAdmin() || (emp != null && provId == emp.provenderieId);
+    }
+
+    // --- ENTITY VALIDATIONS ---
+
+    function isValidProvenderie(data) {
+      return data.keys().hasAll(['id', 'name', 'identifier']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.identifier is string && data.identifier.size() <= 20;
+    }
+
+    function isValidCustomer(data) {
+      return data.keys().hasAll(['id', 'name', 'provenderieId']) &&
+             data.id is string && data.name is string && data.provenderieId is string &&
+             data.name.size() <= 100 &&
+             data.advanceBalance is number && data.outstandingDebt is number;
+    }
+
+    function isValidProduct(data) {
+      return data.keys().hasAll(['id', 'name', 'category', 'price', 'stock', 'provenderieId']) &&
+             data.id is string && data.name is string && data.price is number && data.stock is number;
+    }
+
+    function isValidInvoice(data) {
+      return data.keys().hasAll(['id', 'date', 'customerName', 'total', 'amountPaid', 'status', 'provenderieId']) &&
+             data.total is number && data.amountPaid is number && data.status in ['PAYÉ', 'PARTIEL', 'IMPAYÉ'];
+    }
+
+    function isValidEmployee(data) {
+      return data.keys().hasAll(['id', 'name', 'role', 'provenderieId']) &&
+             data.id is string && data.name is string && data.role is string;
+    }
+
+    // --- RULES ---
+
+    // 1. Provenderies
+    match /provenderies/{provId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidProvenderie(incoming());
+      allow update: if (isSuperAdmin() || (isAdminOf(provId) && incoming().id == existing().id)) && isValidProvenderie(incoming());
+      allow delete: if isSuperAdmin();
+    }
+
+    // 2. Employees (Bootstrap/Login)
+    match /employees/{employeeId} {
+      allow read: if isSignedIn() && (request.auth.uid == employeeId || isAdminOf(existing().provenderieId));
+      allow list: if isSignedIn() && (isSuperAdmin() || resource.data.provenderieId == getEmployee().provenderieId);
+      allow create: if isSignedIn() && (request.auth.uid == employeeId || isSuperAdmin() || isAdminOf(incoming().provenderieId)) && isValidEmployee(incoming());
+      allow update: if isSignedIn() && (request.auth.uid == employeeId || isAdminOf(existing().provenderieId)) && isValidEmployee(incoming());
+      allow delete: if isSuperAdmin() || (isSignedIn() && isAdminOf(existing().provenderieId));
+    }
+
+    // 3. Boutiques
+    match /boutiques/{boutiqueId} {
+      allow read: if isSignedIn() && (isSuperAdmin() || isMemberOf(existing().provenderieId));
+      allow list: if isSignedIn() && (isSuperAdmin() || resource.data.provenderieId == getEmployee().provenderieId);
+      allow create: if isSignedIn() && (isSuperAdmin() || isAdminOf(incoming().provenderieId));
+      allow update: if isSignedIn() && (
+        isSuperAdmin() || 
+        isAdminOf(existing().provenderieId) ||
+        (isMemberOf(existing().provenderieId) && incoming().diff(existing()).affectedKeys().hasOnly(['openStatus', 'lastOpenedAt', 'lastClosedAt', 'openedBy', 'closedBy']))
+      );
+      allow delete: if isSignedIn() && (isSuperAdmin() || isAdminOf(existing().provenderieId));
+    }
+
+    // 4. Products
+    match /products/{productId} {
+      allow read: if isSignedIn() && (isSuperAdmin() || isMemberOf(existing().provenderieId));
+      allow list: if isSignedIn() && (isSuperAdmin() || resource.data.provenderieId == getEmployee().provenderieId);
+      allow create: if isSignedIn() && (isSuperAdmin() || isAdminOf(incoming().provenderieId)) && isValidProduct(incoming());
+      allow update: if isSignedIn() && (isSuperAdmin() || isMemberOf(existing().provenderieId) || isAdminOf(existing().provenderieId)) && isValidProduct(incoming());
+      allow delete: if isSignedIn() && (isSuperAdmin() || isAdminOf(existing().provenderieId));
+    }
+
+    // 5. Invoices
+    match /invoices/{invoiceId} {
+      allow read: if isSignedIn() && (isSuperAdmin() || isMemberOf(existing().provenderieId));
+      allow list: if isSignedIn() && (isSuperAdmin() || resource.data.provenderieId == getEmployee().provenderieId);
+      allow create: if isSignedIn() && (isSuperAdmin() || isMemberOf(incoming().provenderieId)) && isValidInvoice(incoming());
+      allow update: if isSignedIn() && (isSuperAdmin() || isMemberOf(existing().provenderieId)) && isValidInvoice(incoming());
+      allow delete: if isSignedIn() && (isSuperAdmin() || isAdminOf(existing().provenderieId));
+    }
+
+    // 6. Customers
+    match /customers/{customerId} {
+      allow read: if isSignedIn() && (isSuperAdmin() || isMemberOf(existing().provenderieId));
+      allow list: if isSignedIn() && (isSuperAdmin() || resource.data.provenderieId == getEmployee().provenderieId);
+      allow create: if isSignedIn() && (isSuperAdmin() || isMemberOf(incoming().provenderieId)) && isValidCustomer(incoming());
+      allow update: if isSignedIn() && (isSuperAdmin() || isMemberOf(existing().provenderieId)) && isValidCustomer(incoming());
+      allow delete: if isSignedIn() && (isSuperAdmin() || isAdminOf(existing().provenderieId));
+    }
+
+    // 7. Expenses
+    match /expenses/{expenseId} {
+      allow read: if isSignedIn() && (isSuperAdmin() || isMemberOf(existing().provenderieId));
+      allow list: if isSignedIn() && (isSuperAdmin() || resource.data.provenderieId == getEmployee().provenderieId);
+      allow create: if isSignedIn() && (isSuperAdmin() || isMemberOf(incoming().provenderieId));
+      allow update: if isSignedIn() && (isSuperAdmin() || isMemberOf(existing().provenderieId));
+      allow delete: if isSignedIn() && (isSuperAdmin() || isAdminOf(existing().provenderieId));
+    }
+
+    // 8. Transfers
+    match /transfers/{transferId} {
+      allow read: if isSignedIn() && (isSuperAdmin() || isMemberOf(existing().provenderieId));
+      allow list: if isSignedIn() && (isSuperAdmin() || resource.data.provenderieId == getEmployee().provenderieId);
+      allow create: if isSignedIn() && (isSuperAdmin() || isMemberOf(incoming().provenderieId));
+      allow update: if isSignedIn() && (isSuperAdmin() || isMemberOf(existing().provenderieId));
+      allow delete: if isSignedIn() && (isSuperAdmin() || isAdminOf(existing().provenderieId));
+    }
+
+    // 9. Roles
+    match /roles/{roleId} {
+      allow read: if isSignedIn(); 
+      allow list: if isSignedIn() && (isSuperAdmin() || resource.data.provenderieId == getEmployee().provenderieId);
+      allow create: if isSuperAdmin() || (isSignedIn() && isAdminOf(incoming().provenderieId));
+      allow update: if isSuperAdmin() || (isSignedIn() && isAdminOf(existing().provenderieId));
+      allow delete: if isSuperAdmin();
+    }
+
+    // 10. Conversations (AI)
+    match /conversations/{convId} {
+      allow read, write: if isSignedIn(); // Simplified for now, usually per-user
+    }
+
+    // 11. Superadmins (Special)
+    match /superadmins/{uid} {
+      allow read: if isSignedIn();
+    }
+
+    // 12. Request Stats
+    match /request_stats/{docId} {
+      allow read, write: if isSignedIn();
+    }
+  }
+}
