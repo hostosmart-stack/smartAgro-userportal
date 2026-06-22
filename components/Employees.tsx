@@ -97,6 +97,7 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [viewingEmployee, setViewingEmployee] = useState<Employee | null>(null);
   const [showConfirmDelete, setShowConfirmDelete] = useState<string | null>(null);
+  const [creationType, setCreationType] = useState<'USER' | 'EMPLOYEE'>('USER');
 
   // Role Management State
   const [isAddingRole, setIsAddingRole] = useState(false);
@@ -114,8 +115,10 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
       components: [
         { id: 'kpi-sales', name: 'KPI: Ventes Totales' },
         { id: 'kpi-orders', name: 'KPI: Commandes' },
-        { id: 'kpi-customers', name: 'KPI: Clients' },
-        { id: 'chart-revenue', name: 'Graphique: Revenus' },
+        { id: 'kpi-debt', name: 'KPI: Solde Dettes Caisse' },
+        { id: 'kpi-customers', name: 'KPI: Clients Actifs' },
+        { id: 'boutique-status-tracker', name: 'Suivi des Ouvertures & Fermetures' },
+        { id: 'chart-revenue', name: 'Pool Stats / Performance Boutiques' },
         { id: 'table-recent', name: 'Tableau: Activité Récente' }
       ]
     },
@@ -147,7 +150,7 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
     { id: 'transfers', label: 'Transferts' },
     { 
       id: 'settings', 
-      label: 'Boutiques (Gestion)',
+      label: 'Boutiques & Paramètres',
       components: [
         { id: 'page-boutiques', name: 'Accès à la page Boutiques' },
         { id: 'kpi-boutique-value', name: 'KPI: Valeur du Stock Boutique' },
@@ -166,7 +169,6 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
       ]
     },
     { id: 'guide', label: 'Guide' },
-    { id: 'settings', label: 'Paramètres' },
   ];
 
   // Payment State
@@ -224,6 +226,7 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
       roles: emp.roles || (emp.role ? emp.role.split(',').map(r => r.trim()) : [])
     });
     setIsAdding(false);
+    setCreationType(emp.username ? 'USER' : 'EMPLOYEE');
   };
 
   const handleAddClick = () => {
@@ -246,6 +249,7 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
       salary: 0,
       ration: 0
     });
+    setCreationType('USER');
   };
 
   const createEmployeeAccount = async (username: string, pin: string) => {
@@ -325,40 +329,50 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
         }
     }
 
-    // Validate username/pin if provided
-    if (form.username && !form.pin && !editingId) {
-        notify("Le code PIN est requis pour créer un compte", "error");
-        return;
+    // Validate username/pin if they are a system USER
+    if (creationType === 'USER') {
+        if (!form.username) {
+            notify("L'identifiant de connexion est requis pour un utilisateur", "error");
+            return;
+        }
+        if (!form.pin && !editingId) {
+            notify("Le code PIN est requis pour créer un utilisateur", "error");
+            return;
+        }
     }
 
     setIsSubmitting(true);
     try {
-      // Create Auth Account if new employee and username provided
-      if (!editingId && form.username && form.pin) {
-          const success = await createEmployeeAccount(form.username, form.pin);
+      const savedUsername = creationType === 'USER' ? form.username : '';
+      const savedPin = creationType === 'USER' ? form.pin : '';
+      const savedEmail = creationType === 'USER' && savedUsername ? `${savedUsername}@gmail.com` : (form.email || '');
+
+      // Create Auth Account if new system USER with credentials
+      if (creationType === 'USER' && !editingId && savedUsername && savedPin) {
+          const success = await createEmployeeAccount(savedUsername, savedPin);
           if (!success) {
               setIsSubmitting(false);
               return;
           }
       }
 
-      const defaultRoleIds = form.roleIds || (form.roleId ? [form.roleId] : []);
-      const defaultRoleNames = form.roles || (form.role ? form.role.split(',').map(r => r.trim()) : []);
+      const defaultRoleIds = creationType === 'USER' ? (form.roleIds || (form.roleId ? [form.roleId] : [])) : [];
+      const defaultRoleNames = creationType === 'USER' ? (form.roles || (form.role ? form.role.split(',').map(r => r.trim()) : [])) : [];
 
       const employee: Employee = {
         id: editingId || Date.now().toString(),
         name: form.name,
-        role: defaultRoleNames.join(', ') || 'Vendeur',
+        role: creationType === 'USER' ? (defaultRoleNames.join(', ') || 'Vendeur') : 'Employé Simple',
         roleId: defaultRoleIds[0] || '',
         roleIds: defaultRoleIds,
         roles: defaultRoleNames,
         phone: form.phone,
-        email: form.username ? `${form.username}@gmail.com` : form.email, // Auto-generate email
+        email: savedEmail,
         contactPersonName: form.contactPersonName,
         contactPersonRelationship: form.contactPersonRelationship,
         contactPersonPhone: form.contactPersonPhone,
-        username: form.username,
-        pin: form.pin, // Store PIN (in real app, should be hashed or not stored, but per request)
+        username: savedUsername,
+        pin: savedPin,
         assignedBoutique: form.assignedBoutique || (defaultRoleNames.includes('Admin') ? 'Toutes' : boutiques[0]?.id),
         salary: Number(form.salary) || 0,
         ration: Number(form.ration) || 0,
@@ -367,7 +381,7 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
       };
       
       await saveEmployee(employee);
-      notify(editingId ? "Employé modifié" : "Employé ajouté et compte créé", "success");
+      notify(editingId ? "Enregistrement modifié" : (creationType === 'USER' ? "Utilisateur système ajouté et compte créé" : "Employé ajouté avec succès"), "success");
       setIsAdding(false);
       setEditingId(null);
     } catch (e) {
@@ -803,8 +817,14 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
                             </div>
                             <div>
                                 <p className="text-xs font-bold text-gray-400 uppercase mb-1">Identifiants Connexion</p>
-                                <p className="text-sm font-bold text-gray-900">ID: {viewingEmployee.username || '-'}</p>
-                                <p className="text-xs text-gray-500">PIN: ****</p>
+                                {viewingEmployee.username ? (
+                                    <>
+                                        <p className="text-sm font-bold text-gray-900">ID: {viewingEmployee.username}</p>
+                                        <p className="text-xs text-gray-500">PIN: ****</p>
+                                    </>
+                                ) : (
+                                    <p className="text-xs font-bold text-amber-600 mt-1 italic font-medium">Aucun (Employé de Terrain)</p>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -926,9 +946,34 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
                  <div className="space-y-1">
                     <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1"><User className="w-3 h-3"/> Nom Complet</label>
                     <input className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-farm-500 outline-none" value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Ex: Jean Kouassi"/>
+                  </div>
+
+                  <div className="space-y-2">
+                     <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1"><Shield className="w-3 h-3"/> Type d'enregistrement</label>
+                     <div className="grid grid-cols-2 gap-2">
+                         <button
+                             type="button"
+                             onClick={() => setCreationType('USER')}
+                             className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex flex-col items-center justify-center gap-2 ${creationType === 'USER' ? 'border-farm-500 bg-farm-50/50 text-farm-700' : 'border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-gray-600'}`}
+                         >
+                             <Shield className="w-4 h-4 text-farm-500" />
+                             <span>Utilisateur Système</span>
+                             <span className="text-[10px] font-normal text-gray-400 whitespace-normal text-center">Accès de connexion (codes)</span>
+                         </button>
+                         <button
+                             type="button"
+                             onClick={() => setCreationType('EMPLOYEE')}
+                             className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex flex-col items-center justify-center gap-2 ${creationType === 'EMPLOYEE' ? 'border-farm-500 bg-farm-50/50 text-farm-700' : 'border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-gray-600'}`}
+                         >
+                             <User className="w-4 h-4 text-farm-400" />
+                             <span>Employé Simple</span>
+                             <span className="text-[10px] font-normal text-gray-400 whitespace-normal text-center">Pas d'accès (payroll seul)</span>
+                         </button>
+                     </div>
                  </div>
                  
                  <div className="grid grid-cols-2 gap-4">
+                    {creationType === 'USER' && (
                     <div className="space-y-1">
                                                  <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1"><Briefcase className="w-3 h-3"/> Rôles (Sélectionnez plusieurs)</label>
                          <div className="w-full border border-gray-200 rounded-xl p-3 bg-white max-h-36 overflow-y-auto space-y-1.5 shadow-sm text-sm">
@@ -988,7 +1033,8 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
                               );
                           })()}
                     </div>
-                    <div className="space-y-1">
+                    )}
+                    <div className={`space-y-1 ${creationType === 'EMPLOYEE' ? 'col-span-2' : ''}`}>
                         <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1"><Store className="w-3 h-3"/> Boutique</label>
                         <select className="w-full p-3 border border-gray-200 rounded-xl text-sm bg-white outline-none" value={form.assignedBoutique} onChange={e => setForm({...form, assignedBoutique: e.target.value as any})}>
                             <option value="Toutes">Toutes (Admin)</option>
@@ -1028,19 +1074,21 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
                       </div>
                   </div>
 
-                  <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 space-y-4">
-                      <h4 className="text-xs font-bold text-blue-900 uppercase border-b border-blue-200 pb-2">Identifiants de Connexion</h4>
-                      <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                             <label className="text-[10px] font-bold text-blue-700 uppercase">{t('login.username')}</label>
-                             <input className="w-full p-2 border border-blue-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" value={form.username || ''} onChange={e => setForm({...form, username: e.target.value})} placeholder="Ex: jean.k"/>
-                          </div>
-                          <div className="space-y-1">
-                             <label className="text-[10px] font-bold text-blue-700 uppercase">Code PIN / Mot de passe</label>
-                             <input type="text" className="w-full p-2 border border-blue-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" value={form.pin || ''} onChange={e => setForm({...form, pin: e.target.value})} placeholder="****"/>
-                          </div>
-                      </div>
-                  </div>
+                  {creationType === 'USER' && (
+                     <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 space-y-4 animate-in slide-in-from-top-2 duration-300">
+                        <h4 className="text-xs font-bold text-blue-900 uppercase border-b border-blue-200 pb-2">Identifiants de Connexion</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                               <label className="text-[10px] font-bold text-blue-700 uppercase">{t('login.username')}</label>
+                               <input className="w-full p-2 border border-blue-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" value={form.username || ''} onChange={e => setForm({...form, username: e.target.value})} placeholder="Ex: jean.k"/>
+                            </div>
+                            <div className="space-y-1">
+                               <label className="text-[10px] font-bold text-blue-700 uppercase">Code PIN / Mot de passe</label>
+                               <input type="text" className="w-full p-2 border border-blue-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" value={form.pin || ''} onChange={e => setForm({...form, pin: e.target.value})} placeholder="****"/>
+                            </div>
+                        </div>
+                     </div>
+                  )}
 
                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">

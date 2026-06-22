@@ -348,16 +348,6 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
                 subtext={`${filteredExpenses.length} sorties`}
             />
             
-            {/* Total En Caisse (Moved here) */}
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-center relative overflow-hidden group">
-                <div className={`absolute right-0 top-0 w-24 h-24 -mr-8 -mt-8 rounded-full opacity-20 transition-transform group-hover:scale-110 ${totalEnCaisse >= 0 ? 'bg-blue-500' : 'bg-red-500'}`}></div>
-                <p className="text-sm font-medium text-gray-500 relative z-10">Total en Caisse</p>
-                <h3 className={`text-2xl font-bold mt-1 relative z-10 ${totalEnCaisse >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                    {formatCurrency(totalEnCaisse)}
-                </h3>
-                <p className="text-xs text-gray-400 mt-1 relative z-10">Cash disponible</p>
-            </div>
-
             {/* Résultat Net (Moved here) */}
             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-center relative overflow-hidden group">
                 <div className={`absolute right-0 top-0 w-24 h-24 -mr-8 -mt-8 rounded-full opacity-20 transition-transform group-hover:scale-110 ${netProfit >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
@@ -366,6 +356,16 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
                     {formatCurrency(netProfit)}
                 </h3>
                 <p className="text-xs text-gray-400 mt-1 relative z-10">Bénéfice final</p>
+            </div>
+
+            {/* Total En Caisse (Moved here) */}
+            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-center relative overflow-hidden group">
+                <div className={`absolute right-0 top-0 w-24 h-24 -mr-8 -mt-8 rounded-full opacity-20 transition-transform group-hover:scale-110 ${totalEnCaisse >= 0 ? 'bg-blue-500' : 'bg-red-500'}`}></div>
+                <p className="text-sm font-medium text-gray-500 relative z-10">Total en Caisse</p>
+                <h3 className={`text-2xl font-bold mt-1 relative z-10 ${totalEnCaisse >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                    {formatCurrency(totalEnCaisse)}
+                </h3>
+                <p className="text-xs text-gray-400 mt-1 relative z-10">Cash disponible</p>
             </div>
           </div>
 

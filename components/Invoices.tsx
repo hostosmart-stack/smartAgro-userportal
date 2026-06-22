@@ -481,12 +481,12 @@ export const Invoices: React.FC<InvoicesProps> = ({ invoices, products, onUpdate
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                    {paginatedInvoices.map(inv => {
+                    {paginatedInvoices.map((inv, idx) => {
                         const customer = customers.find(c => c.name === inv.customerName);
                         const remainingAdvance = customer ? customer.advanceBalance : 0;
                         return (
                         <tr 
-                            key={inv.id} 
+                            key={`${inv.id}-${idx}`} 
                             onClick={() => setSelectedInvoice(inv)}
                             className="hover:bg-gray-50/80 cursor-pointer transition-colors group"
                         >
@@ -562,12 +562,12 @@ export const Invoices: React.FC<InvoicesProps> = ({ invoices, products, onUpdate
 
              {/* Mobile Card List */}
              <div className="md:hidden divide-y divide-gray-100">
-                {paginatedInvoices.map(inv => {
+                {paginatedInvoices.map((inv, idx) => {
                     const customer = customers.find(c => c.name === inv.customerName);
                     const remainingAdvance = customer ? customer.advanceBalance : 0;
                     return (
                         <div 
-                            key={inv.id} 
+                            key={`${inv.id}-${idx}`} 
                             onClick={() => setSelectedInvoice(inv)}
                             className="p-4 active:bg-gray-50 transition-colors flex flex-col gap-3"
                         >

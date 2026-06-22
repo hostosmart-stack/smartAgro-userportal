@@ -610,7 +610,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   {filteredInvoices.slice(0, 4).map((inv, idx) => {
                      return (
                         <div 
-                          key={inv.id || idx} 
+                          key={`${inv.id || 'inv'}-${idx}`} 
                           className="flex items-center justify-between gap-4 p-4 rounded-2xl hover:bg-slate-50/50 dark:hover:bg-slate-850/40 border border-transparent hover:border-slate-100/50 dark:hover:border-slate-800/40 transition-all duration-300"
                         >
                            <div className="flex items-center gap-4">
