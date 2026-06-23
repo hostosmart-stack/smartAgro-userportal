@@ -29,7 +29,7 @@ jobs:
         with:
           # Required SMTP server settings
           server_address: ${{ secrets.SMTP_SERVER }} # e.g., ://gmail.com
-          server_port: 465                           # Usually 465 or 587
+          server_port: 587                          # Usually 465 or 587
           username: ${{ secrets.SMTP_USERNAME }}     # Your email username
           password: ${{ secrets.SMTP_PASSWORD }}     # Your email password / App Password
           
