@@ -1,0 +1,24 @@
+name: Deploy to Firebase Live
+on:
+  push:
+    branches:
+      - main # Triggers when code is pushed or merged to main
+
+jobs:
+  deploy_live:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Add your application build steps here (uncomment if using a framework)
+      # - name: Install Dependencies & Build
+      #   run: npm ci && npm run build
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          channelId: live
+          projectId: your-firebase-project-id # Replace with your actual project ID
