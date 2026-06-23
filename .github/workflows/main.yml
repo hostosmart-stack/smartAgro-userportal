@@ -16,9 +16,30 @@ jobs:
       #   run: npm ci && npm run build
 
       - name: Deploy to Firebase Hosting
+        id: firebase_deploy # 1. Added ID to extract outputs
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           channelId: live
-          projectId: smart-agro-e64a0 # Replace with your actual project ID
+          projectId: smart-agro-e64a0
+
+      - name: Send Deployment URL to Email
+        uses: dawidd6/action-send-mail@v4
+        with:
+          # Required SMTP server settings
+          server_address: ${{ secrets.SMTP_SERVER }} # e.g., ://gmail.com
+          server_port: 465                           # Usually 465 or 587
+          username: ${{ secrets.SMTP_USERNAME }}     # Your email username
+          password: ${{ secrets.SMTP_PASSWORD }}     # Your email password / App Password
+          
+          # Email content customization
+          subject: "🚀 Project smart-agro-e64a0 successfully deployed!"
+          to: danielledjofang2003@gmail.com                   # Replace with your destination email
+          from: GitHub Actions <no-reply@example.com>
+          body: |
+            Great news! The latest version of your app has been successfully deployed.
+            
+            🔗 Live URL: ${{ steps.firebase_deploy.outputs.details_url }}
+            
+            Triggered by commit: ${{ github.sha }} on branch ${{ github.ref_name }}.
