@@ -22,6 +22,15 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
   });
   const canFilterBoutique = userRole === 'Admin' || (userRole === 'Gérant' && userBoutique === 'Toutes');
 
+  const mainBoutiqueId = boutiques[0]?.id || 'Boutique 1';
+
+  const isSameBoutique = (b1: string, b2: string) => {
+    if (b1 === b2) return true;
+    const isB1Main = b1 === 'Boutique 1' || b1 === mainBoutiqueId;
+    const isB2Main = b2 === 'Boutique 1' || b2 === mainBoutiqueId;
+    return isB1Main && isB2Main;
+  };
+
   // --- FILTERING HELPERS ---
   const isDateInRange = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -47,9 +56,9 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
 
   const filteredInvoices = useMemo(() => invoices.filter(inv => {
       if (!isDateInRange(inv.date)) return false;
-      if (boutiqueFilter !== 'all' && inv.boutique !== boutiqueFilter) return false;
+      if (boutiqueFilter !== 'all' && !isSameBoutique(inv.boutique || 'Boutique 1', boutiqueFilter)) return false;
       return true;
-  }), [invoices, timeRange, boutiqueFilter]);
+  }), [invoices, timeRange, boutiqueFilter, mainBoutiqueId]);
 
   // Filter Products based on Category
   const filteredProducts = useMemo(() => {
@@ -64,12 +73,13 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
     let stock = 0;
     let costValue = 0;
     let sellValue = 0;
+    const isMain = isSameBoutique(boutiqueFilter, mainBoutiqueId);
     
     if (p.variants && p.variants.length > 0) {
       p.variants.forEach(v => {
         const vStock = boutiqueFilter === 'all' 
           ? (v.stock || 0) + Object.values(v.boutiqueStock || {}).reduce((a, b) => a + b, 0)
-          : (boutiqueFilter === 'Boutique 1' ? (v.stock || 0) : (v.boutiqueStock?.[boutiqueFilter] || 0));
+          : (isMain ? (v.stock || 0) : (v.boutiqueStock?.[boutiqueFilter] || 0));
         stock += vStock;
         costValue += vStock * (v.costPrice || p.costPrice || 0);
         sellValue += vStock * (v.price || p.price);
@@ -77,7 +87,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
     } else {
       const pStock = boutiqueFilter === 'all'
         ? p.stock + Object.values(p.boutiqueStock || {}).reduce((a, b) => a + b, 0)
-        : (boutiqueFilter === 'Boutique 1' ? p.stock : (p.boutiqueStock?.[boutiqueFilter] || 0));
+        : (isMain ? p.stock : (p.boutiqueStock?.[boutiqueFilter] || 0));
       stock = pStock;
       costValue = pStock * (p.costPrice || 0);
       sellValue = pStock * p.price;
@@ -103,10 +113,11 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
       const metrics = getProductMetrics(p);
 
       if (p.variants && p.variants.length > 0) {
+        const isMain = isSameBoutique(boutiqueFilter, mainBoutiqueId);
         p.variants.forEach(v => {
           const vStock = boutiqueFilter === 'all' 
             ? (v.stock || 0) + Object.values(v.boutiqueStock || {}).reduce((a, b) => a + b, 0)
-            : (boutiqueFilter === 'Boutique 1' ? (v.stock || 0) : (v.boutiqueStock?.[boutiqueFilter] || 0));
+            : (isMain ? (v.stock || 0) : (v.boutiqueStock?.[boutiqueFilter] || 0));
 
           // Calculate sold quantity for this specific variant
           const soldQty = filteredInvoices.reduce((acc, inv) => {
@@ -167,9 +178,10 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
             }, 0);
           }, 0);
 
+          const isMain = isSameBoutique(boutiqueFilter, mainBoutiqueId);
           const baseStock = boutiqueFilter === 'all'
             ? p.stock + Object.values(p.boutiqueStock || {}).reduce((a, b) => a + b, 0)
-            : (boutiqueFilter === 'Boutique 1' ? p.stock : (p.boutiqueStock?.[boutiqueFilter] || 0));
+            : (isMain ? p.stock : (p.boutiqueStock?.[boutiqueFilter] || 0));
 
           list.push({
             name: p.name,
@@ -226,12 +238,13 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
   // Stock Valuation Analysis (Inventory Tab)
   const stockValuation = useMemo(() => {
     const list: any[] = [];
+    const isMain = isSameBoutique(boutiqueFilter, mainBoutiqueId);
     filteredProducts.forEach(p => {
       if (p.variants && p.variants.length > 0) {
         p.variants.forEach(v => {
           const vStock = boutiqueFilter === 'all' 
             ? (v.stock || 0) + Object.values(v.boutiqueStock || {}).reduce((a, b) => a + b, 0)
-            : (boutiqueFilter === 'Boutique 1' ? (v.stock || 0) : (v.boutiqueStock?.[boutiqueFilter] || 0));
+            : (isMain ? (v.stock || 0) : (v.boutiqueStock?.[boutiqueFilter] || 0));
           const unitCost = v.costPrice ?? p.costPrice ?? 0;
           const totalValue = vStock * unitCost;
           list.push({
@@ -248,7 +261,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
       } else {
         const pStock = boutiqueFilter === 'all'
           ? p.stock + Object.values(p.boutiqueStock || {}).reduce((a, b) => a + b, 0)
-          : (boutiqueFilter === 'Boutique 1' ? p.stock : (p.boutiqueStock?.[boutiqueFilter] || 0));
+          : (isMain ? p.stock : (p.boutiqueStock?.[boutiqueFilter] || 0));
         const unitCost = p.costPrice || 0;
         const totalValue = pStock * unitCost;
         list.push({
