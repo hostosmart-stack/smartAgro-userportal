@@ -26,6 +26,12 @@ interface MixIngredient {
 export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admin', userPermissions = [], userBoutique = 'Toutes', boutiques = [], onNavigate, onTransferProduct, currentProvenderieId }) => {
   const { t } = useLanguage();
   const { notify } = useNotifications();
+  
+  const isInventoryAdmin = userRole === 'Admin' || 
+                           userRole.toLowerCase().trim() === 'superadmin' || 
+                           userRole.toLowerCase().trim() === 'system-admin' || 
+                           userRole.toLowerCase().trim().includes('administrateur');
+                           
   const [searchTerm, setSearchTerm] = useState('');
   const [activeGroup, setActiveGroup] = useState<string>('all');
 
@@ -1450,7 +1456,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
             <p className="text-sm text-gray-500 font-medium mt-1">{t('inventory.subtitle')}</p>
           </div>
           <div className="flex gap-3">
-            {(userRole === 'Admin' || userPermissions.includes('formulas')) && (
+            {(isInventoryAdmin || userPermissions.includes('formulas')) && (
               <button 
                   onClick={() => setIsMixing(true)}
                   className="bg-purple-50 text-purple-700 hover:bg-purple-100 px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all font-bold text-sm border border-purple-100"
@@ -1458,7 +1464,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
                   <FlaskConical className="w-4 h-4" /> {t('inventory.mixer')}
               </button>
             )}
-            {(userRole === 'Admin' || userPermissions.includes('inventory')) && (
+            {(isInventoryAdmin || userPermissions.includes('inventory')) && (
               <button 
                   onClick={handleAddClick}
                   className="bg-farm-600 hover:bg-farm-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-farm-200 font-bold text-sm"

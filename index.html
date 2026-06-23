@@ -176,6 +176,128 @@
     -webkit-backdrop-filter: blur(12px);
     background-color: rgba(255, 255, 255, 0.7) !important;
   }
+
+  /* Robust Mobile-First Premium Optimization */
+  @media (max-width: 768px) {
+    /* Base Font Sizing Scales Down for mobile */
+    html {
+      font-size: 14px !important;
+    }
+
+    /* Keep app layouts away from screen borders on mobile */
+    body {
+      padding-left: 2px !important;
+      padding-right: 2px !important;
+    }
+
+    /* Scales down all heading sizes to fit mobile screens perfectly without breaking or clipping */
+    h1 {
+      font-size: 1.75rem !important;
+      line-height: 2.15rem !important;
+      letter-spacing: -0.025em !important;
+    }
+    h2 {
+      font-size: 1.45rem !important;
+      line-height: 1.8rem !important;
+    }
+    h3 {
+      font-size: 1.25rem !important;
+      line-height: 1.55rem !important;
+    }
+    h4 {
+      font-size: 1.1rem !important;
+      line-height: 1.35rem !important;
+    }
+
+    /* Scale buttons to be compact and touch-friendly (no massive clunky heights) */
+    button, .btn {
+      padding-top: 0.55rem !important;
+      padding-bottom: 0.55rem !important;
+      padding-left: 1.15rem !important;
+      padding-right: 1.15rem !important;
+      font-size: 0.8125rem !important; /* 13px */
+      font-weight: 700 !important;
+      border-radius: 10px !important;
+    }
+
+    /* Make sure small utility buttons inside shelves don't get padded too large */
+    button.p-1, button.p-2, button.p-3 {
+      padding: 0.35rem !important;
+    }
+    button.p-2.5 {
+      padding: 0.45rem !important;
+    }
+
+    /* inputs & inputs text sizes */
+    input, select, textarea {
+      padding-top: 0.55rem !important;
+      padding-bottom: 0.55rem !important;
+      padding-left: 0.85rem !important;
+      padding-right: 0.85rem !important;
+      font-size: 0.85rem !important; /* 13.5 px */
+      border-radius: 10px !important;
+    }
+
+    /* Clean spacing inside cards, preventing them from feeling extremely tight or overly padded */
+    .p-6 {
+      padding: 1.05rem !important;
+    }
+    .p-8, .p-10, .p-12 {
+      padding: 1.25rem !important;
+    }
+    .px-6 {
+      padding-left: 1rem !important;
+      padding-right: 1rem !important;
+    }
+    .py-12, .py-16, .py-20, .py-24 {
+      padding-top: 2rem !important;
+      padding-bottom: 2rem !important;
+    }
+    .my-10, .my-12 {
+      margin-top: 1.5rem !important;
+      margin-bottom: 1.5rem !important;
+    }
+
+    /* Standardize list items or grid elements for perfect spacing on smaller viewports */
+    .gap-6, .gap-8, .gap-10, .gap-16 {
+      gap: 0.85rem !important;
+    }
+
+    /* Tighten border-radius on cards for premium look on small devices */
+    .rounded-3xl {
+      border-radius: 14px !important;
+    }
+    .rounded-\[2\.5rem\], .rounded-\[3rem\] {
+      border-radius: 18px !important;
+    }
+
+    /* Prevent tables from causing horizontal document scroll or sticking */
+    table {
+      font-size: 0.8rem !important;
+    }
+    th, td {
+      padding: 0.65rem 0.65rem !important;
+    }
+
+    /* Optimizing the Hub categories block for mobile */
+    .group.flex.flex-col {
+      border-radius: 20px !important;
+      padding: 1.5rem !important;
+    }
+    .w-16.h-16 {
+      width: 3.25rem !important;
+      height: 3.25rem !important;
+    }
+    .w-16.h-16 svg {
+      width: 1.75rem !important;
+      height: 1.75rem !important;
+    }
+
+    /* Landing/Hero items spacing */
+    .pt-32 {
+      padding-top: 6rem !important;
+    }
+  }
 </style>
 <link rel="stylesheet" href="/index.css">
 </head>

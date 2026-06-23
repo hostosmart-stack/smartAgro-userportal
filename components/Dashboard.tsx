@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { Product, Invoice, Category, Boutique, UserRole, StockTransfer } from '../types';
+import { Product, Invoice, Category, Boutique, UserRole, StockTransfer, Expense } from '../types';
 import { TrendingUp, AlertTriangle, Wallet, Package, ArrowUpRight, Filter, Calendar, Store, CreditCard, CheckCircle2, XCircle, ChevronRight, Clock, Lock, Unlock, Loader2, RefreshCw, Layers } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { toggleBoutiqueOpenStatus } from '../services/db';
@@ -11,6 +11,7 @@ interface DashboardProps {
   invoices: Invoice[];
   boutiques?: Boutique[];
   transfers?: StockTransfer[];
+  expenses?: Expense[];
   onNavigate: (view: string) => void;
   userRole?: string;
   userBoutique?: string;
@@ -26,6 +27,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   invoices, 
   boutiques = [], 
   transfers = [],
+  expenses = [],
   onNavigate, 
   userRole = 'Admin', 
   userBoutique = 'Toutes', 
@@ -39,7 +41,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [timeRange, setTimeRange] = useState<TimeRange>('month');
   const [togglingBoutiqueId, setTogglingBoutiqueId] = useState<string | null>(null);
 
-  const isAdmin = userRole === 'Admin' || userRole === 'superadmin' || userRole === 'system-admin';
+  const cleanRole = (userRole || '').toLowerCase().trim();
+  const isAdmin = cleanRole === 'admin' || 
+                  cleanRole === 'superadmin' || 
+                  cleanRole === 'system-admin' || 
+                  cleanRole.includes('administrateur') || 
+                  cleanRole.includes('admin') || 
+                  (cleanRole.includes('super') && cleanRole.includes('admin'));
   const isMagasinier = userRole.toLowerCase().includes('magasinier');
   const isCaissier = userRole.toLowerCase().includes('caissier') || userRole.toLowerCase().includes('vendeur');
 
@@ -66,6 +74,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
       .filter(inv => inv.status !== 'PAYÉ')
       .reduce((acc, inv) => acc + (inv.total - inv.amountPaid), 0);
   }, [todayInvoices]);
+
+  const todayExpensesAmount = useMemo(() => {
+    const todayStr = new Date().toDateString();
+    return (expenses || [])
+      .filter(exp => {
+        if (exp.deleted) return false;
+        if (userBoutique && userBoutique !== 'Toutes' && exp.boutique && exp.boutique !== userBoutique) {
+          return false;
+        }
+        return new Date(exp.date).toDateString() === todayStr;
+      })
+      .reduce((sum, exp) => sum + exp.amount, 0);
+  }, [expenses, userBoutique]);
 
   const boutiqueStockStats = useMemo(() => {
     return (boutiques || []).filter(b => userBoutique === 'Toutes' || b.id === userBoutique || b.name === userBoutique).map(b => {
@@ -97,20 +118,35 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const isVisible = (componentId: string) => {
-    if (userRole === 'Admin' || userRole === 'superadmin') return true;
+    if (isAdmin) return true;
     if (!userRoleObj?.pagePermissions) return true;
-    const pagePerm = userRoleObj.pagePermissions.find(p => p.pageId === 'dashboard');
+    const pagePerms = userRoleObj.pagePermissions;
+    let pagePerm: any = null;
+    if (Array.isArray(pagePerms)) {
+      pagePerm = pagePerms.find(p => p.pageId === 'dashboard');
+    } else if (pagePerms && typeof pagePerms === 'object') {
+      pagePerm = pagePerms['dashboard' as any];
+    }
     if (!pagePerm) return true;
-    return pagePerm.components.find(c => c.id === componentId)?.visible ?? true;
+    if (typeof pagePerm === 'boolean') return pagePerm;
+    if (pagePerm && Array.isArray(pagePerm.components)) {
+      return pagePerm.components.find((c: any) => c.id === componentId)?.visible ?? true;
+    }
+    return true;
   };
 
   // Helper to filter invoices by date and boutique
   const filteredInvoices = useMemo(() => {
     const now = new Date();
+    const todayStr = now.toDateString();
     return invoices.filter(inv => {
       // Boutique filter
       if (userBoutique && userBoutique !== 'Toutes' && inv.boutique !== userBoutique) {
         return false;
+      }
+
+      if (isCaissier) {
+        return new Date(inv.date).toDateString() === todayStr;
       }
 
       const invDate = new Date(inv.date);
@@ -132,7 +168,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       }
       return true;
     });
-  }, [invoices, timeRange]);
+  }, [invoices, timeRange, isCaissier, userBoutique]);
 
   // Calculate Stats based on filtered invoices
   const totalRevenue = useMemo(() => filteredInvoices.reduce((acc, curr) => acc + curr.total, 0), [filteredInvoices]);
@@ -296,6 +332,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* Central Pill Selector & Actions */}
         <div className="flex flex-wrap items-center gap-4">
              {/* Time range Pill Selector Matches the center option of template header */}
+             {!isCaissier && (
              <div className="bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800/80 px-2.5 py-1.5 rounded-full shadow-sm flex items-center gap-1">
                  <Calendar className="w-3.5 h-3.5 text-slate-400 ml-1.5" />
                  <select 
@@ -311,6 +348,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                      <option value="all">{t('common.all')}</option>
                  </select>
              </div>
+             )}
 
              {/* Category Pill Selector */}
              <div className="bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800/80 px-2.5 py-1.5 rounded-full shadow-sm flex items-center gap-1">
@@ -521,8 +559,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
             {/* CAISSIER CARD A: Today's Cash Performance (left - takes 5/12 cols) */}
             <div 
               id="caissier-kpi-today-sales"
-              onClick={() => onNavigate('pos')}
-              className="lg:col-span-5 rounded-[2.5rem] bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-400 p-8 text-white shadow-[0_20px_40px_-10px_rgba(16,185,129,0.3)] hover:-translate-y-1 hover:shadow-[0_24px_50px_rgba(16,185,129,0.4)] transition-all duration-300 relative overflow-hidden flex flex-col justify-between cursor-pointer group min-h-[220px]"
+              onClick={() => onNavigate('invoices')}
+              className="lg:col-span-4 rounded-[2.5rem] bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-400 p-8 text-white shadow-[0_20px_40px_-10px_rgba(16,185,129,0.3)] hover:-translate-y-1 hover:shadow-[0_24px_50px_rgba(16,185,129,0.4)] transition-all duration-300 relative overflow-hidden flex flex-col justify-between cursor-pointer group min-h-[220px]"
             >
               <div className="absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity pointer-events-none flex items-end">
                  <svg viewBox="0 0 400 120" className="w-full h-24 stroke-white fill-none stroke-[3] stroke-round">
@@ -558,10 +596,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
               </div>
             </div>
 
-            {/* CAISSIER CARD B: Outstanding Debt check (middle - takes 4/12 cols) */}
+            {/* CAISSIER CARD C: Outstanding Debt check (right - takes 4/12 cols) */}
             <div 
               id="caissier-kpi-debts-tracking"
-              onClick={() => onNavigate('pos')}
+              onClick={() => onNavigate('invoices')}
               className="lg:col-span-4 bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-white/80 dark:border-slate-800/80 shadow-[0_8px_30px_rgba(0,0,0,0.02)] flex flex-col justify-between relative overflow-hidden min-h-[220px] cursor-pointer"
             >
                <div className="flex justify-between items-center mb-4">
@@ -596,47 +634,46 @@ export const Dashboard: React.FC<DashboardProps> = ({
                </div>
 
                <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-widest text-slate-400 pt-3 border-t border-slate-50 dark:border-slate-800/40">
-                  <span className="text-slate-400">Suivi d'Inscrits & Factures</span>
+                  <span className="text-slate-400">Total Factures du Jour : {filteredInvoices.length}</span>
                </div>
             </div>
 
-            {/* CAISSIER CARD C: Minor Stats (takes 3/12 cols) */}
-            <div className="lg:col-span-3 flex flex-col gap-6 justify-between animate-in slide-in-from-right duration-500" id="caissier-kpi-substacks">
-               <div 
-                 id="caissier-sub-lowstock"
-                 onClick={() => onNavigate('inventory')}
-                 className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-white shadow-sm flex items-center justify-between hover:translate-x-0.5 transition-all cursor-pointer flex-1"
-               >
-                  <div className="space-y-1">
-                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ALIMENTS BAS EN STOCK</p>
-                     <p className="text-xl font-black text-amber-500 font-display">
-                        {lowStockCount} <span className="text-[10px] font-bold">ALIMENTS</span>
+            {/* CAISSIER CARD B: Today's Expenses (middle - takes 4/12 cols) */}
+            <div 
+              id="caissier-kpi-today-expenses"
+              onClick={() => onNavigate('accounting')}
+              className="lg:col-span-4 rounded-[2.5rem] bg-gradient-to-br from-amber-600 via-orange-500 to-rose-500 p-8 text-white shadow-[0_20px_40px_-10px_rgba(245,158,11,0.3)] hover:-translate-y-1 hover:shadow-[0_24px_50px_rgba(245,158,11,0.4)] transition-all duration-300 relative overflow-hidden flex flex-col justify-between cursor-pointer group min-h-[220px]"
+            >
+               <div className="absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity pointer-events-none flex items-end">
+                  <svg viewBox="0 0 400 120" className="w-full h-24 stroke-white fill-none stroke-[3] stroke-round">
+                     <path d="M0,100 Q100,20 200,80 T400,40" />
+                  </svg>
+               </div>
+
+               <div className="relative z-10 flex items-center justify-between">
+                  <div>
+                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">
+                        DÉPENSES DU JOUR
                      </p>
-                     <p className="text-[9px] text-rose-400 font-black uppercase tracking-widest">
-                        Alerte approvisionnement
-                     </p>
+                     <p className="text-[9px] font-bold text-white/50 uppercase tracking-widest mt-0.5">Sorties de caisse</p>
                   </div>
-                  <div className="bg-amber-50 dark:bg-amber-950 p-3 rounded-2xl text-amber-500">
-                     <AlertTriangle className="w-5 h-5" />
+                  <div className="bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider tracking-widest">
+                     Comptabilité
                   </div>
                </div>
 
-               <div 
-                 id="caissier-sub-total-invoices"
-                 onClick={() => onNavigate('pos')}
-                 className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-white shadow-sm flex items-center justify-between hover:translate-x-0.5 transition-all cursor-pointer flex-1"
-               >
-                  <div className="space-y-1">
-                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">FACTURES TOTALES</p>
-                     <p className="text-xl font-black text-indigo-600 font-display">
-                        {invoices.length}
-                     </p>
-                     <p className="text-[9px] text-indigo-500 font-black uppercase tracking-widest">
-                        Base de transactions
-                     </p>
-                  </div>
-                  <div className="bg-indigo-50 dark:bg-indigo-950 p-3 rounded-2xl text-indigo-500">
-                     <CreditCard className="w-5 h-5" />
+               <div className="relative z-10 my-6">
+                  <h3 className="text-4xl xs:text-5xl font-display font-black tracking-tight leading-none text-white drop-shadow-sm truncate">
+                     {todayExpensesAmount.toLocaleString('fr-FR')} 
+                     <span className="text-xs font-black uppercase ml-1.5 text-white/80">FCFA</span>
+                  </h3>
+               </div>
+
+               <div className="relative z-10 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-white/80 pt-4 border-t border-white/10">
+                  <span>Bas en stock : {lowStockCount} Aliments</span>
+                  <div className="flex items-center gap-1.5 bg-white/15 px-2.5 py-1 rounded-full">
+                     <Wallet className="w-3.5 h-3.5 text-white/95" />
+                     <span>Suivi Dépenses</span>
                   </div>
                </div>
             </div>
@@ -824,7 +861,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* --- TRACKER DE STATUT D'OUVERTURE DES BOUTIQUES --- */}
-      {isVisible('boutique-status-tracker') && !isMagasinier && (
+      {isVisible('boutique-status-tracker') && !isMagasinier && !isCaissier && (
         <div className="my-8 bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-white/80 dark:border-slate-800/80 shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-50 dark:border-slate-800/40">
             <div>
@@ -844,7 +881,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               const isToggling = togglingBoutiqueId === b.id;
               
               // Allowed to toggle if Admin or assigned to this specific boutique
-              const canToggle = userRole === 'Admin' || userRole === 'superadmin' || userBoutique === 'Toutes' || userBoutique === b.id || userBoutique === b.name;
+              const canToggle = isAdmin || userBoutique === 'Toutes' || userBoutique === b.id || userBoutique === b.name;
 
               // Format date/time
               const lastActionTime = isOpen ? b.lastOpenedAt : b.lastClosedAt;
@@ -970,7 +1007,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
          
          {/* LEFT LIST: Feed Activity Table component taking 7/12 cols */}
          {isVisible('table-recent') && (
-            <div className={`${isMagasinier ? 'lg:col-span-12' : 'lg:col-span-8'} bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-white/80 dark:border-slate-800/80 shadow-[0_8px_30px_rgba(0,0,0,0.02)]`}>
+            <div className={`${isMagasinier || isCaissier ? 'lg:col-span-12' : 'lg:col-span-8'} bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-white/80 dark:border-slate-800/80 shadow-[0_8px_30px_rgba(0,0,0,0.02)]`}>
                {isMagasinier ? (
                   <>
                      <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-50 dark:border-slate-800/40">
@@ -1119,7 +1156,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
          )}
 
          {/* RIGHT GRAPH: Boutique Performance Column graphic matching Pool Stats 3/12 cols */}
-         {isVisible('chart-revenue') && !isMagasinier && (
+         {isVisible('chart-revenue') && !isMagasinier && !isCaissier && (
             <div className="lg:col-span-4 bg-white dark:bg-[#121824] rounded-[2.5rem] p-8 border border-white/80 dark:border-slate-800/80 shadow-[0_8px_30px_rgba(0,0,0,0.02)] flex flex-col justify-between">
                <div className="flex items-center justify-between mb-8">
                   <div>

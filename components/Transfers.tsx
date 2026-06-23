@@ -80,7 +80,18 @@ export const Transfers: React.FC<TransfersProps> = ({ products, transfers, bouti
     if (!product) return;
 
     // Check available stock at source
-    const sourceStock = userBoutique === 'Toutes' ? product.stock : (product.boutiqueStock?.[userBoutique] || 0);
+    let sourceStock = 0;
+    const isMain = userBoutique === 'Toutes' || userBoutique === 'Boutique 1';
+    
+    if (selectedVariant) {
+      const variant = product.variants?.find(v => v.name === selectedVariant);
+      if (variant) {
+        sourceStock = isMain ? (variant.stock || 0) : (variant.boutiqueStock?.[userBoutique] || 0);
+      }
+    } else {
+      sourceStock = isMain ? (product.stock || 0) : (product.boutiqueStock?.[userBoutique] || 0);
+    }
+
     if (parseInt(quantity) > sourceStock) {
       notify('Stock insuffisant pour ce transfert.', 'error');
       return;
@@ -165,20 +176,46 @@ export const Transfers: React.FC<TransfersProps> = ({ products, transfers, bouti
         const product = products.find(p => p.id === item.productId);
         if (product) {
           const updatedProduct = { ...product };
-          if (!updatedProduct.boutiqueStock) updatedProduct.boutiqueStock = {};
           
-          // 1. Deduct from source
-          if (transfer.sourceBoutique === 'Boutique 1') {
-            updatedProduct.stock -= item.quantity;
-          } else {
-            updatedProduct.boutiqueStock[transfer.sourceBoutique] = (updatedProduct.boutiqueStock[transfer.sourceBoutique] || 0) - item.quantity;
-          }
+          if (item.variantName && updatedProduct.variants) {
+            const variantIndex = updatedProduct.variants.findIndex(v => v.name === item.variantName);
+            if (variantIndex >= 0) {
+              const newVariants = [...updatedProduct.variants];
+              const variant = { ...newVariants[variantIndex] };
+              if (!variant.boutiqueStock) variant.boutiqueStock = {};
 
-          // 2. Add to destination
-          if (transfer.destinationBoutique === 'Boutique 1') {
-            updatedProduct.stock += item.quantity;
+              // 1. Deduct from source
+              if (transfer.sourceBoutique === 'Boutique 1') {
+                variant.stock = (variant.stock || 0) - item.quantity;
+              } else {
+                variant.boutiqueStock[transfer.sourceBoutique] = (variant.boutiqueStock[transfer.sourceBoutique] || 0) - item.quantity;
+              }
+
+              // 2. Add to destination
+              if (transfer.destinationBoutique === 'Boutique 1') {
+                variant.stock = (variant.stock || 0) + item.quantity;
+              } else {
+                variant.boutiqueStock[transfer.destinationBoutique] = (variant.boutiqueStock[transfer.destinationBoutique] || 0) + item.quantity;
+              }
+
+              newVariants[variantIndex] = variant;
+              updatedProduct.variants = newVariants;
+            }
           } else {
-            updatedProduct.boutiqueStock[transfer.destinationBoutique] = (updatedProduct.boutiqueStock[transfer.destinationBoutique] || 0) + item.quantity;
+            if (!updatedProduct.boutiqueStock) updatedProduct.boutiqueStock = {};
+            // 1. Deduct from source
+            if (transfer.sourceBoutique === 'Boutique 1') {
+              updatedProduct.stock -= item.quantity;
+            } else {
+              updatedProduct.boutiqueStock[transfer.sourceBoutique] = (updatedProduct.boutiqueStock[transfer.sourceBoutique] || 0) - item.quantity;
+            }
+
+            // 2. Add to destination
+            if (transfer.destinationBoutique === 'Boutique 1') {
+              updatedProduct.stock += item.quantity;
+            } else {
+              updatedProduct.boutiqueStock[transfer.destinationBoutique] = (updatedProduct.boutiqueStock[transfer.destinationBoutique] || 0) + item.quantity;
+            }
           }
           
           await saveProduct(updatedProduct);
@@ -382,9 +419,14 @@ export const Transfers: React.FC<TransfersProps> = ({ products, transfers, bouti
                     className="flex-1 p-2.5 rounded-xl border-gray-200 focus:border-farm-500 focus:ring-farm-500"
                   >
                     <option value="">Sélectionner un produit</option>
-                    {products.filter(p => !p.deleted).map(p => (
-                      <option key={p.id} value={p.id}>{p.name} (Stock: {userBoutique === 'Toutes' ? p.stock : (p.boutiqueStock?.[userBoutique] || 0)})</option>
-                    ))}
+                    {products.filter(p => !p.deleted).map(p => {
+                      const displayStock = (userBoutique === 'Toutes' || userBoutique === 'Boutique 1') 
+                        ? p.stock 
+                        : (p.boutiqueStock?.[userBoutique] || 0);
+                      return (
+                        <option key={p.id} value={p.id}>{p.name} (Stock: {displayStock})</option>
+                      );
+                    })}
                   </select>
                   {selectedProduct && products.find(p => p.id === selectedProduct)?.variants && products.find(p => p.id === selectedProduct)!.variants!.length > 0 && (
                     <select
@@ -393,9 +435,14 @@ export const Transfers: React.FC<TransfersProps> = ({ products, transfers, bouti
                       className="w-full md:w-48 p-2.5 rounded-xl border-gray-200 focus:border-farm-500 focus:ring-farm-500"
                     >
                       <option value="">Variante (Optionnel)</option>
-                      {products.find(p => p.id === selectedProduct)?.variants?.map(v => (
-                        <option key={v.name} value={v.name}>{v.name}</option>
-                      ))}
+                      {products.find(p => p.id === selectedProduct)?.variants?.map(v => {
+                        const variantStock = (userBoutique === 'Toutes' || userBoutique === 'Boutique 1')
+                          ? (v.stock || 0)
+                          : (v.boutiqueStock?.[userBoutique] || 0);
+                        return (
+                          <option key={v.name} value={v.name}>{v.name} (Stock: {variantStock})</option>
+                        );
+                      })}
                     </select>
                   )}
                   <input

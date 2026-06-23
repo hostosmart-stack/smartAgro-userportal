@@ -30,6 +30,7 @@ import {
   subscribeToConversations,
   saveInvoice, 
   saveExpense,
+  saveRole,
   processSaleTransaction,
   voidSaleTransaction,
   initRequestStats
@@ -91,6 +92,7 @@ const InnerApp = () => {
   const [boutiques, setBoutiques] = useState<Boutique[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [roles, setRoles] = useState<UserRole[]>([]);
+  const [rolesLoaded, setRolesLoaded] = useState(false);
   const [transfers, setTransfers] = useState<StockTransfer[]>([]);
   const [provenderies, setProvenderies] = useState<Provenderie[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -208,6 +210,74 @@ const InnerApp = () => {
     return () => unsubscribe();
   }, [user]);
 
+  // Seed default roles into database if the roles collection is empty for the current provenderie
+  useEffect(() => {
+    if (!currentProvenderieId || !rolesLoaded || roles.length > 0) return;
+
+    const defaultSystemRoles = [
+      {
+        id: `system-admin-${currentProvenderieId}`,
+        name: 'Admin',
+        permissions: ['pos', 'invoices', 'inventory', 'formulas', 'employees', 'dashboard', 'settings', 'transfers', 'guide', 'reports'] as Permission[],
+        pagePermissions: [
+          { pageId: 'dashboard' as Permission, enabled: true, components: [] },
+          { pageId: 'inventory' as Permission, enabled: true, components: [] },
+          { pageId: 'transfers' as Permission, enabled: true, components: [] },
+          { pageId: 'pos' as Permission, enabled: true, components: [] },
+          { pageId: 'analytics' as Permission, enabled: true, components: [] },
+          { pageId: 'accounting' as Permission, enabled: true, components: [] },
+          { pageId: 'invoices' as Permission, enabled: true, components: [] },
+          { pageId: 'employees' as Permission, enabled: true, components: [] },
+          { pageId: 'boutiques' as Permission, enabled: true, components: [] },
+          { pageId: 'advisor' as Permission, enabled: true, components: [] },
+          { pageId: 'settings' as Permission, enabled: true, components: [] },
+          { pageId: 'guide' as Permission, enabled: true, components: [] },
+          { pageId: 'reports' as Permission, enabled: true, components: [] },
+          { pageId: 'formulas' as Permission, enabled: true, components: [] }
+        ],
+        provenderieId: currentProvenderieId
+      },
+      {
+        id: `system-caissier-${currentProvenderieId}`,
+        name: 'Caissier',
+        permissions: ['pos', 'invoices', 'dashboard', 'reports'] as Permission[],
+        pagePermissions: [
+          { pageId: 'dashboard' as Permission, enabled: true, components: [] },
+          { pageId: 'pos' as Permission, enabled: true, components: [] },
+          { pageId: 'invoices' as Permission, enabled: true, components: [] },
+          { pageId: 'reports' as Permission, enabled: true, components: [] }
+        ],
+        provenderieId: currentProvenderieId
+      },
+      {
+        id: `system-vendeur-${currentProvenderieId}`,
+        name: 'Vendeur',
+        permissions: ['pos', 'dashboard'] as Permission[],
+        pagePermissions: [
+          { pageId: 'dashboard' as Permission, enabled: true, components: [] },
+          { pageId: 'pos' as Permission, enabled: true, components: [] }
+        ],
+        provenderieId: currentProvenderieId
+      },
+      {
+        id: `system-magasinier-${currentProvenderieId}`,
+        name: 'Magasinier',
+        permissions: ['inventory', 'transfers', 'formulas', 'dashboard'] as Permission[],
+        pagePermissions: [
+          { pageId: 'dashboard' as Permission, enabled: true, components: [] },
+          { pageId: 'inventory' as Permission, enabled: true, components: [] },
+          { pageId: 'transfers' as Permission, enabled: true, components: [] },
+          { pageId: 'formulas' as Permission, enabled: true, components: [] }
+        ],
+        provenderieId: currentProvenderieId
+      }
+    ];
+
+    defaultSystemRoles.forEach(roleObj => {
+      saveRole(roleObj).catch((err) => console.error("Error seeding default role:", err));
+    });
+  }, [currentProvenderieId, rolesLoaded, roles]);
+
   // Data Subscriptions (Firestore Listeners)
   useEffect(() => {
     if (!user) return;
@@ -219,7 +289,10 @@ const InnerApp = () => {
     const unsubBoutiques = subscribeToBoutiques(currentProvenderieId, setBoutiques);
     const unsubCustomers = subscribeToCustomers(currentProvenderieId, setCustomers);
     const unsubTransfers = subscribeToTransfers(currentProvenderieId, setTransfers);
-    const unsubRoles = subscribeToRoles(currentProvenderieId, setRoles);
+    const unsubRoles = subscribeToRoles(currentProvenderieId, (fetchedRoles) => {
+      setRoles(fetchedRoles);
+      setRolesLoaded(true);
+    });
     
     // Provenderies subscription is global for administrators
     const unsubProvenderies = subscribeToProvenderies((data) => {
@@ -338,7 +411,16 @@ const InnerApp = () => {
     if (!roleObj) return [];
     
     const normName = (roleObj.name || '').toLowerCase().trim();
-    const isSuperOrAdmin = normName === 'superadmin' || normName === 'admin' || normName === 'system-admin';
+    const isSuperOrAdmin = normName === 'superadmin' || 
+                           normName === 'admin' || 
+                           normName === 'system-admin' ||
+                           normName === 'super administrateur' ||
+                           normName === 'superadministrateur' ||
+                           normName === 'super-administrateur' ||
+                           normName === 'administrateur' ||
+                           normName.includes('system') ||
+                           (normName.includes('super') && normName.includes('admin')) ||
+                           normName.includes('administrateur');
     
     const allViews: string[] = ['dashboard', 'inventory', 'transfers', 'pos', 'analytics', 'accounting', 'invoices', 'employees', 'boutiques', 'advisor', 'settings', 'guide', 'reports', 'formulas'];
 
@@ -433,7 +515,15 @@ const InnerApp = () => {
   // License Enforcement Check
   const isLicenseExpiredCheck = () => {
     if (!currentProvenderie || !currentProvenderie.licenseEnforced) return false;
-    if (userRole === 'superadmin') return false; // Superadmins bypass blocking to correct settings
+    const norm = (userRole || '').toLowerCase().trim();
+    const isSuper = norm === 'superadmin' || 
+                    norm === 'super-admin' || 
+                    norm === 'system-admin' || 
+                    norm === 'super administrateur' || 
+                    norm === 'superadministrateur' || 
+                    norm === 'super-administrateur' || 
+                    (norm.includes('super') && norm.includes('admin'));
+    if (isSuper) return false; // Superadmins bypass blocking to correct settings
     
     const expiryDateStr = currentProvenderie.licenseExpiryDate;
     if (!expiryDateStr) return false;
@@ -537,7 +627,16 @@ const InnerApp = () => {
 
     const requiredPermission = viewPermissions[currentView] as Permission;
     const normRole = (userRole || 'Admin').toLowerCase().trim();
-    const isSuperOrAdmin = normRole === 'admin' || normRole === 'superadmin' || normRole === 'system-admin';
+    const isSuperOrAdmin = normRole === 'admin' || 
+                           normRole === 'superadmin' || 
+                           normRole === 'system-admin' ||
+                           normRole === 'super administrateur' ||
+                           normRole === 'superadministrateur' ||
+                           normRole === 'super-administrateur' ||
+                           normRole === 'administrateur' ||
+                           normRole.includes('system') ||
+                           (normRole.includes('super') && normRole.includes('admin')) ||
+                           normRole.includes('administrateur');
 
     let hasPermission = isSuperOrAdmin || 
                         userPermissions.includes(currentView) || 
@@ -556,7 +655,7 @@ const InnerApp = () => {
     }
 
     switch (currentView) {
-      case 'dashboard': return <Dashboard products={filteredProducts} invoices={filteredInvoices} boutiques={filteredBoutiques} transfers={filteredTransfers} onNavigate={setCurrentView} userRole={userRole} userBoutique={userBoutique} userRoleObj={userRoleObj} userName={currentEmployee?.name || 'Administrateur'} userEmail={currentEmployee?.email || ''} />;
+      case 'dashboard': return <Dashboard products={filteredProducts} invoices={filteredInvoices} boutiques={filteredBoutiques} transfers={filteredTransfers} expenses={filteredExpenses} onNavigate={setCurrentView} userRole={userRole} userBoutique={userBoutique} userRoleObj={userRoleObj} userName={currentEmployee?.name || 'Administrateur'} userEmail={currentEmployee?.email || ''} />;
       case 'inventory': return <Inventory products={filteredProducts} userRole={userRole} userPermissions={userPermissions} userBoutique={userBoutique} boutiques={filteredBoutiques} onNavigate={setCurrentView} onTransferProduct={(id) => { setPreSelectedTransferProduct(id); setCurrentView('transfers'); }} currentProvenderieId={currentProvenderieId} />;
       case 'transfers': return <Transfers products={filteredProducts} transfers={filteredTransfers} boutiques={filteredBoutiques} userRole={userRole} userBoutique={userBoutique} userName={currentEmployee?.name || 'Administrateur'} preSelectedProductId={preSelectedTransferProduct} onClearPreSelection={() => setPreSelectedTransferProduct(null)} currentProvenderieId={currentProvenderieId} />;
       case 'pos': return <POS products={filteredProducts} employees={filteredEmployees} invoices={filteredInvoices} expenses={filteredExpenses} customers={filteredCustomers} onCheckout={handleCheckout} onAddExpense={handleAddExpense} onVoidLastSale={handleVoidLastSale} userBoutique={userBoutique} userRole={userRole} userPermissions={userPermissions} boutiques={filteredBoutiques} companyName={settings.companyName} userName={currentEmployee?.name || 'Administrateur'} currentProvenderieId={currentProvenderieId} provenderies={provenderies} />;
@@ -579,7 +678,7 @@ const InnerApp = () => {
         expenses={expenses}
         currentEmployee={currentEmployee}
       />;
-      default: return <Dashboard products={products} invoices={invoices} boutiques={boutiques} transfers={transfers} onNavigate={setCurrentView} />;
+      default: return <Dashboard products={products} invoices={invoices} boutiques={boutiques} transfers={transfers} expenses={expenses} onNavigate={setCurrentView} />;
     }
   };
 

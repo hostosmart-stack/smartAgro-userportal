@@ -76,7 +76,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ].filter(item => {
     // Role/Permission filter using userRole and userPermissions
     const normRole = (userRole || 'Admin').toLowerCase().trim();
-    const isSuperOrAdmin = normRole === 'admin' || normRole === 'superadmin' || normRole === 'system-admin';
+    const isSuperOrAdmin = normRole === 'admin' || 
+                           normRole === 'superadmin' || 
+                           normRole === 'system-admin' ||
+                           normRole === 'super administrateur' ||
+                           normRole === 'superadministrateur' ||
+                           normRole === 'super-administrateur' ||
+                           normRole === 'administrateur' ||
+                           normRole.includes('system') ||
+                           (normRole.includes('super') && normRole.includes('admin')) ||
+                           normRole.includes('administrateur');
     const hasPermission = isSuperOrAdmin || 
                           userPermissions.includes(item.id) || 
                           (item.permission && userPermissions.includes(item.permission));

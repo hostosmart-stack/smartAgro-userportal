@@ -72,7 +72,12 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
   // Initialize boutique based on user assignment
   const initialBoutique = (userBoutique && userBoutique !== 'Toutes') ? userBoutique : (boutiques[0]?.id || 'Boutique 1');
   const [selectedBoutique, setSelectedBoutique] = useState<string>(initialBoutique);
-  const canSelectBoutique = userRole === 'Admin' || (userRole === 'Gérant' && userBoutique === 'Toutes');
+  
+  const isPOSAdmin = userRole === 'Admin' || 
+                    userRole.toLowerCase().trim() === 'superadmin' || 
+                    userRole.toLowerCase().trim() === 'system-admin' || 
+                    userRole.toLowerCase().trim().includes('administrateur');
+  const canSelectBoutique = isPOSAdmin || (userRole === 'Gérant' && userBoutique === 'Toutes');
 
   // Quantity Modal
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -567,7 +572,7 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
 
             <div className="p-6 border-t bg-white flex flex-col sm:flex-row gap-4 justify-between items-center">
                 <div className="flex gap-3 w-full sm:w-auto">
-                    {(userRole === 'Admin' || userPermissions.includes('reports')) && (
+                    {(isPOSAdmin || userPermissions.includes('reports')) && (
                         <button onClick={() => { 
                             if (window.confirm("Êtes-vous sûr de vouloir annuler cette vente ?")) {
                                  onVoidLastSale(showReceipt.id, products);
@@ -579,7 +584,7 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
                             Annuler Vente
                         </button>
                     )}
-                    {(userRole === 'Admin' || userPermissions.includes('invoices')) && (
+                    {(isPOSAdmin || userPermissions.includes('invoices')) && (
                         <button onClick={handleEditLastSale} className="flex-1 sm:flex-none px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-200 border border-gray-200 transition-colors">
                             Modifier
                         </button>
@@ -1286,10 +1291,18 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
                         </select>
                      </div>
 
-                     {expenseForm.category === 'DIVERS' && (
+                     {expenseForm.category !== 'SALAIRE' && expenseForm.category !== 'RATION' && (
                          <div>
-                            <label className="text-[10px] md:text-xs font-bold text-gray-500 uppercase block mb-1 md:mb-2">Motif</label>
-                            <textarea className="w-full p-3 md:p-4 border border-gray-200 rounded-xl text-sm md:text-base focus:ring-2 focus:ring-red-500 outline-none transition-all" rows={3} placeholder="Ex: Achat balais, Réparation serrure..." value={expenseForm.motif} onChange={e => setExpenseForm({...expenseForm, motif: e.target.value})} />
+                            <label className="text-[10px] md:text-xs font-bold text-gray-500 uppercase block mb-1 md:mb-2">
+                                {expenseForm.category === 'DIVERS' ? 'Motif *' : 'Détails / Commentaire (Optionnel)'}
+                            </label>
+                            <textarea 
+                                className="w-full p-3 md:p-4 border border-gray-200 rounded-xl text-sm md:text-base focus:ring-2 focus:ring-red-500 outline-none transition-all" 
+                                rows={2} 
+                                placeholder={expenseForm.category === 'DIVERS' ? "Ex: Achat balais, Réparation serrure..." : "Saisir des notes optionnelles..."} 
+                                value={expenseForm.motif} 
+                                onChange={e => setExpenseForm({...expenseForm, motif: e.target.value})} 
+                            />
                          </div>
                      )}
 
@@ -1338,6 +1351,11 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
                          const selectedBoutiqueName = boutiques.find(b => b.id === selectedBoutique)?.name || '';
 
                          // Validation
+                         if (isNaN(amount) || amount <= 0) {
+                             notify("Veuillez saisir un montant de sortie valide supérieur à 0", "error");
+                             return;
+                         }
+
                          if (expenseForm.category === 'DIVERS' && !expenseForm.motif) {
                              notify("Le motif est requis pour Divers", "error");
                              return;
@@ -1349,46 +1367,48 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
 
                          // Check cash balance
                          const currentCash = invoices
-                            .filter(i => i.boutique === selectedBoutique)
+                            .filter(i => i.boutique === selectedBoutique && !i.deleted)
                             .reduce((acc, i) => acc + i.amountPaid, 0) - 
                             expenses
-                            .filter(e => e.boutique === selectedBoutique)
+                            .filter(e => e.boutique === selectedBoutique && !e.deleted)
                             .reduce((acc, e) => acc + e.amount, 0);
 
                          if (amount > currentCash) {
-                             notify(`Solde insuffisant en caisse (${new Intl.NumberFormat('fr-FR').format(currentCash)} F)`, "error");
-                             return;
+                             // Let it register so they can still operate even with unrecorded float or negative cash, but notify nicely
+                             notify(`Attention : Le solde théorique de caisse est insuffisant (${new Intl.NumberFormat('fr-FR').format(currentCash)} F)`, "info");
                          }
 
-                         if(amount > 0) {
-                             onAddExpense({ 
-                                 id: Date.now().toString(), 
-                                 date: new Date().toISOString(), 
-                                 amount, 
-                                 description: expenseForm.category === 'DIVERS' ? expenseForm.motif : `${expenseForm.category} - ${employees.find(e => e.id === expenseForm.employeeId)?.name}`, 
-                                 category: expenseForm.category as any,
-                                 employeeId: expenseForm.employeeId,
-                                 boutique: selectedBoutique,
-                                 provenderieId: currentProvenderieId
-                             });
-                             
-                             if (expenseForm.category === 'SALAIRE' || expenseForm.category === 'RATION') {
-                                 const emp = employees.find(e => e.id === expenseForm.employeeId);
-                                 if (emp) {
-                                     const updatedEmp = { ...emp };
-                                     if (expenseForm.category === 'SALAIRE') {
-                                         updatedEmp.pendingSalary = Math.max(0, (updatedEmp.pendingSalary || 0) - amount);
-                                     } else {
-                                         updatedEmp.pendingRation = Math.max(0, (updatedEmp.pendingRation || 0) - amount);
-                                     }
-                                     saveEmployee(updatedEmp);
+                         const expenseDescription = (expenseForm.category === 'SALAIRE' || expenseForm.category === 'RATION')
+                             ? `${expenseForm.category} - ${employees.find(e => e.id === expenseForm.employeeId)?.name || 'Inconnu'}`
+                             : (expenseForm.category === 'DIVERS' ? expenseForm.motif : `${expenseForm.category}${expenseForm.motif ? ' - ' + expenseForm.motif : ''}`);
+
+                         onAddExpense({ 
+                             id: Date.now().toString(), 
+                             date: new Date().toISOString(), 
+                             amount, 
+                             description: expenseDescription, 
+                             category: expenseForm.category as any,
+                             employeeId: expenseForm.employeeId || undefined,
+                             boutique: selectedBoutique,
+                             provenderieId: currentProvenderieId
+                         });
+                         
+                         if (expenseForm.category === 'SALAIRE' || expenseForm.category === 'RATION') {
+                             const emp = employees.find(e => e.id === expenseForm.employeeId);
+                             if (emp) {
+                                 const updatedEmp = { ...emp };
+                                 if (expenseForm.category === 'SALAIRE') {
+                                     updatedEmp.pendingSalary = Math.max(0, (updatedEmp.pendingSalary || 0) - amount);
+                                 } else {
+                                     updatedEmp.pendingRation = Math.max(0, (updatedEmp.pendingRation || 0) - amount);
                                  }
+                                 saveEmployee(updatedEmp);
                              }
-
-                             setShowExpenseModal(false);
-                             setExpenseForm({ amount: '', motif: '', category: 'DIVERS', employeeId: '' });
-                             notify("Sortie enregistrée", "info");
                          }
+
+                         setShowExpenseModal(false);
+                         setExpenseForm({ amount: '', motif: '', category: 'DIVERS', employeeId: '' });
+                         notify("Sortie enregistrée", "success");
                      }} className="flex-1 py-4 bg-red-600 text-white rounded-xl font-bold shadow-lg hover:bg-red-700 hover:shadow-red-200 transition-all flex items-center justify-center gap-2">
                         Valider la Sortie
                      </button>

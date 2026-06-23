@@ -22,7 +22,14 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
   const { notify } = useNotifications();
   const { t, language } = useLanguage();
 
-  const isSuperAdminUser = userRole.toLowerCase().trim() === 'superadmin' || userRole.toLowerCase().trim() === 'super-admin' || userRole.toLowerCase().trim() === 'system-admin';
+  const isSuperAdminUser = userRole.toLowerCase().trim() === 'superadmin' || 
+                           userRole.toLowerCase().trim() === 'super-admin' || 
+                           userRole.toLowerCase().trim() === 'system-admin' ||
+                           userRole.toLowerCase().trim() === 'super administrateur' ||
+                           userRole.toLowerCase().trim() === 'superadministrateur' ||
+                           userRole.toLowerCase().trim() === 'super-administrateur' ||
+                           userRole.toLowerCase().trim().includes('system') ||
+                           (userRole.toLowerCase().trim().includes('super') && userRole.toLowerCase().trim().includes('admin'));
 
   const translateRoleName = (roleName: string) => {
     if (!roleName) return '';
@@ -44,40 +51,7 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
     }
   };
 
-  const defaultSystemRoles: UserRole[] = [
-    {
-      id: 'system-admin',
-      name: 'Admin',
-      permissions: ['pos', 'invoices', 'inventory', 'formulas', 'employees', 'dashboard', 'settings', 'transfers', 'guide', 'reports'],
-      provenderieId: currentProvenderieId
-    },
-    {
-      id: 'system-caissier',
-      name: 'Caissier',
-      permissions: ['pos', 'invoices', 'dashboard', 'reports'],
-      provenderieId: currentProvenderieId
-    },
-    {
-      id: 'system-vendeur',
-      name: 'Vendeur',
-      permissions: ['pos', 'dashboard'],
-      provenderieId: currentProvenderieId
-    },
-    {
-      id: 'system-magasinier',
-      name: 'Magasinier',
-      permissions: ['inventory', 'transfers', 'formulas', 'dashboard'],
-      provenderieId: currentProvenderieId
-    }
-  ];
-
   const availableRoles = [...roles];
-  defaultSystemRoles.forEach(dsr => {
-    const normName = dsr.name.toLowerCase().trim();
-    if (!roles.some(r => r.name.toLowerCase().trim() === normName)) {
-      availableRoles.push(dsr);
-    }
-  });
 
   const hasSuperadminRole = availableRoles.some(r => r.name.toLowerCase().trim() === 'superadmin' || r.name.toLowerCase().trim() === 'super-admin');
   
@@ -1034,7 +1008,40 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
                           })()}
                     </div>
                     )}
-                    <div className={`space-y-1 ${creationType === 'EMPLOYEE' ? 'col-span-2' : ''}`}>
+                    {creationType === 'EMPLOYEE' && (
+                     <div className="space-y-1">
+                          <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1"><Briefcase className="w-3 h-3"/> Poste / Rôle</label>
+                          <select 
+                              className="w-full p-3 border border-gray-200 rounded-xl text-sm bg-white outline-none" 
+                              value={form.roleId || ''} 
+                              onChange={e => {
+                                  const rId = e.target.value;
+                                  const rObj = availableRoles.find(role => role.id === rId);
+                                  setForm({
+                                      ...form,
+                                      roleId: rId,
+                                      role: rObj ? rObj.name : 'Employé Simple',
+                                      roleIds: rId ? [rId] : [],
+                                      roles: rObj ? [rObj.name] : []
+                                  });
+                              }}
+                          >
+                              <option value="">Sélectionner un rôle de la DB...</option>
+                              {availableRoles
+                                .filter(r => {
+                                  const isSuperRole = r.name.toLowerCase().trim() === 'superadmin' || r.name.toLowerCase().trim() === 'super-admin';
+                                  return isSuperAdminUser || !isSuperRole;
+                                })
+                                .map((r, idx) => (
+                                  <option key={r.id || `role-sel-opt-${idx}`} value={r.id}>
+                                      {translateRoleName(r.name)}
+                                  </option>
+                                ))
+                              }
+                          </select>
+                     </div>
+                     )}
+                     <div className="space-y-1">
                         <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1"><Store className="w-3 h-3"/> Boutique</label>
                         <select className="w-full p-3 border border-gray-200 rounded-xl text-sm bg-white outline-none" value={form.assignedBoutique} onChange={e => setForm({...form, assignedBoutique: e.target.value as any})}>
                             <option value="Toutes">Toutes (Admin)</option>
@@ -1155,7 +1162,16 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
                                       {roleForm.permissions?.includes(perm.id) && perm.components && (
                                           <div className="p-4 bg-gray-50/50 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-2">
                                               {perm.components.map((comp, compIdx) => {
-                                                  const isVisible = roleForm.pagePermissions?.find(p => p.pageId === perm.id)?.components.find(c => c.id === comp.id)?.visible ?? true;
+                                                  const pagePerms = roleForm.pagePermissions;
+                                                   let pagePerm: any = null;
+                                                   if (Array.isArray(pagePerms)) {
+                                                       pagePerm = pagePerms.find(p => p.pageId === perm.id);
+                                                   } else if (pagePerms && typeof pagePerms === 'object') {
+                                                       pagePerm = pagePerms[perm.id as any];
+                                                   }
+                                                   const isVisible = (pagePerm && Array.isArray(pagePerm.components))
+                                                       ? (pagePerm.components.find((c: any) => c.id === comp.id)?.visible ?? true)
+                                                       : true;
                                                   return (
                                                       <button
                                                           key={comp.id || `comp-${compIdx}`}

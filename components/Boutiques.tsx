@@ -27,13 +27,38 @@ export const Boutiques: React.FC<BoutiquesProps> = ({ products, boutiques = [], 
   });
 
   const isVisible = (componentId: string) => {
-    if (userRole === 'Admin' || userRole === 'superadmin') return true;
+    const normRole = (userRole || '').toLowerCase().trim();
+    const isSuperOrAdmin = normRole === 'admin' || 
+                           normRole === 'superadmin' || 
+                           normRole === 'system-admin' || 
+                           normRole.includes('administrateur') || 
+                           normRole.includes('admin') || 
+                           (normRole.includes('super') && normRole.includes('admin'));
+    if (isSuperOrAdmin) return true;
     if (!userRoleObj?.pagePermissions) return true;
-    const pagePerm = userRoleObj.pagePermissions.find(p => p.pageId === 'settings');
+    const pagePerms = userRoleObj.pagePermissions;
+    let pagePerm: any = null;
+    if (Array.isArray(pagePerms)) {
+      pagePerm = pagePerms.find(p => p.pageId === 'settings');
+    } else if (pagePerms && typeof pagePerms === 'object') {
+      pagePerm = pagePerms['settings' as any];
+    }
     if (!pagePerm) return true;
-    return pagePerm.components.find(c => c.id === componentId)?.visible ?? true;
+    if (typeof pagePerm === 'boolean') return pagePerm;
+    if (pagePerm && Array.isArray(pagePerm.components)) {
+      return pagePerm.components.find((c: any) => c.id === componentId)?.visible ?? true;
+    }
+    return true;
   };
-  const canManageBoutiques = userRole === 'Admin' || (userRole === 'Gérant' && userBoutique === 'Toutes');
+
+  const normRole = (userRole || '').toLowerCase().trim();
+  const isSuperOrAdmin = normRole === 'admin' || 
+                         normRole === 'superadmin' || 
+                         normRole === 'system-admin' || 
+                         normRole.includes('administrateur') || 
+                         normRole.includes('admin') || 
+                         (normRole.includes('super') && normRole.includes('admin'));
+  const canManageBoutiques = isSuperOrAdmin || (userRole === 'Gérant' && userBoutique === 'Toutes');
   
   // Boutique Management State
   const [isAddingBoutique, setIsAddingBoutique] = useState(false);
@@ -563,6 +588,7 @@ export const Boutiques: React.FC<BoutiquesProps> = ({ products, boutiques = [], 
           userRole={userRole} 
           userBoutique={userBoutique} 
           userName="Administrateur" 
+          currentProvenderieId={currentProvenderieId}
         />
       </div>
     ) : (

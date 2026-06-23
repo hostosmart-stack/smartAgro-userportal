@@ -121,7 +121,7 @@ export const Hub: React.FC<HubProps> = ({
         t('hub.section.comptabilite_f3')
       ],
       tag: t('hub.section.comptabilite_tag'),
-      permissions: ['reports']
+      permissions: ['reports', 'accounting', 'analytics']
     },
     administration: {
       id: 'administration' as AppCategory,
@@ -152,7 +152,18 @@ export const Hub: React.FC<HubProps> = ({
     categoriesMap.comptabilite,
     categoriesMap.administration
   ].filter(cat => {
-    if (userRole === 'Admin' || userRole === 'superadmin') return true;
+    const norm = (userRole || '').toLowerCase().trim();
+    const isSuperOrAdmin = norm === 'admin' || 
+                           norm === 'superadmin' || 
+                           norm === 'system-admin' ||
+                           norm === 'super administrateur' ||
+                           norm === 'superadministrateur' ||
+                           norm === 'super-administrateur' ||
+                           norm === 'administrateur' ||
+                           norm.includes('system') ||
+                           (norm.includes('super') && norm.includes('admin')) ||
+                           norm.includes('administrateur');
+    if (isSuperOrAdmin) return true;
     return cat.permissions.some(p => userPermissions.includes(p));
   });
 
