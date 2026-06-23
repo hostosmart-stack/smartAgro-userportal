@@ -569,7 +569,7 @@ export const Assistant: React.FC<AssistantProps> = ({ products, invoices, boutiq
               </header>
 
               <div className="grid grid-cols-1 gap-6">
-                {selectedReport.sections.map((section) => (
+                {(selectedReport.sections || []).map((section) => (
                   <div key={section.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 relative group">
                     <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 border-b border-gray-100 pb-2">
                       {section.type === 'chart' ? <BarChartIcon className="w-4 h-4 text-[var(--color-farm-600)]" /> : <FileText className="w-4 h-4 text-[var(--color-farm-600)]" />}
@@ -594,7 +594,7 @@ export const Assistant: React.FC<AssistantProps> = ({ products, invoices, boutiq
                                                 if (r.id === editingSection.reportId) {
                                                     return {
                                                         ...r,
-                                                        sections: r.sections.map(s => s.id === editingSection.sectionId ? { ...s, content: editingSection.content } : s)
+                                                        sections: (r.sections || []).map(s => s.id === editingSection.sectionId ? { ...s, content: editingSection.content } : s)
                                                     };
                                                 }
                                                 return r;
@@ -602,7 +602,7 @@ export const Assistant: React.FC<AssistantProps> = ({ products, invoices, boutiq
                                             if (selectedReport?.id === editingSection.reportId) {
                                                 setSelectedReport(prev => prev ? {
                                                     ...prev,
-                                                    sections: prev.sections.map(s => s.id === editingSection.sectionId ? { ...s, content: editingSection.content } : s)
+                                                    sections: (prev.sections || []).map(s => s.id === editingSection.sectionId ? { ...s, content: editingSection.content } : s)
                                                 } : null);
                                             }
                                             setEditingSection(null);

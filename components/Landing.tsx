@@ -23,6 +23,25 @@ export const Landing: React.FC<LandingProps> = ({ onLoginClick }) => {
   const [activePolicy, setActivePolicy] = useState<'privacy' | 'terms' | 'security' | null>(null);
   const { t, language, setLanguage } = useLanguage();
 
+  // Mini formulation simulator states
+  const [maisRatio, setMaisRatio] = useState<number>(60);
+  const [sojaRatio, setSojaRatio] = useState<number>(25);
+  const concentreRatio = Math.max(0, 100 - maisRatio - sojaRatio);
+
+  const proteinLevel = parseFloat(((maisRatio * 8.5 + sojaRatio * 44 + concentreRatio * 35) / 100).toFixed(1));
+  const costPerKg = Math.round((maisRatio * 190 + sojaRatio * 420 + concentreRatio * 750) / 100);
+
+  // Determine ideal formulation output
+  const getRecommendation = () => {
+    if (proteinLevel < 15) {
+      return language === 'fr' ? "Aliment Finition" : "Finisher Feed";
+    } else if (proteinLevel >= 15 && proteinLevel < 19) {
+      return language === 'fr' ? "Aliment Pondeuses" : "Layer Feed";
+    } else {
+      return language === 'fr' ? "Aliment Démarrage" : "Starter Feed";
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white font-sans selection:bg-farm-500 selection:text-white overflow-hidden">
       {/* Navbar */}
@@ -113,67 +132,138 @@ export const Landing: React.FC<LandingProps> = ({ onLoginClick }) => {
                </div>
             </div>
 
-            {/* Right mock terminal card column */}
+            {/* Right column: Beautiful Interactive Formulation Simulator */}
             <div className="flex-1 relative animate-in zoom-in-95 duration-1000 delay-200 w-full">
-               <div className="absolute inset-0 bg-farm-500/10 rounded-full blur-[80px] opacity-40"></div>
+               <div className="absolute inset-0 bg-gradient-to-tr from-farm-500/20 via-emerald-500/10 to-blue-500/20 rounded-full blur-[100px] opacity-45 pointer-events-none -z-10"></div>
                
-               <div className="relative z-10 w-full aspect-square bg-gradient-to-br from-slate-50 to-white rounded-[2.5rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] border-[10px] border-white p-6 sm:p-8 flex flex-col justify-between overflow-hidden group hover:scale-[1.02] transition-all duration-500">
-                  <div className="absolute inset-0 opacity-[0.03] bg-[linear-gradient(to_right,#808080_2px,transparent_2px),linear-gradient(to_bottom,#808080_2px,transparent_2px)] bg-[size:32px_32px]"></div>
+               <div className="relative z-10 w-full bg-slate-900 border border-slate-800 rounded-[2.5rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] p-6 sm:p-8 flex flex-col justify-between overflow-hidden group hover:border-farm-500/30 transition-all duration-500">
+                  <div className="absolute inset-0 opacity-[0.02] bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:24px_24px]"></div>
                   
-                  <div className="flex items-center justify-between relative z-10 w-full border-b border-gray-100 pb-5">
+                  {/* Header of Simulator */}
+                  <div className="flex items-center justify-between relative z-10 w-full border-b border-slate-800 pb-4">
                      <div className="flex items-center gap-2">
                         <div className="flex gap-1.5">
-                           <span className="w-3 h-3 rounded-full bg-rose-400"></span>
-                           <span className="w-3 h-3 rounded-full bg-amber-400"></span>
-                           <span className="w-3 h-3 rounded-full bg-emerald-400"></span>
+                           <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                           <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
                         </div>
-                        <span className="text-[10px] font-mono font-bold text-slate-300 ml-3">v3.core.production.env</span>
+                        <span className="text-[10px] font-mono font-bold text-slate-500 ml-2">smartmixer.preview.sh</span>
                      </div>
-                     <div className="bg-farm-500/10 text-farm-600 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider">
-                        {t('landing.live_system')}
+                     <div className="bg-farm-500/20 text-farm-400 border border-farm-500/30 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider">
+                        {language === 'fr' ? 'Émulateur dynamique' : 'Dynamic Emulator'}
                      </div>
                   </div>
 
-                  <div className="flex-1 flex items-center justify-center relative w-full my-6">
-                     <div className="absolute w-48 h-48 rounded-full bg-gradient-to-tr from-farm-500/15 to-emerald-500/5 flex items-center justify-center animate-pulse">
-                        <div className="w-32 h-32 rounded-full bg-white border border-slate-50 shadow-2xl flex items-center justify-center">
-                           <Award className="w-12 h-12 text-farm-600" />
+                  {/* Simulator Sliders & Outputs */}
+                  <div className="my-6 relative z-10 space-y-6 text-left">
+                     <div className="bg-slate-950/60 border border-slate-800/60 p-5 rounded-2xl relative overflow-hidden">
+                        <div className="flex justify-between items-center mb-4">
+                           <span className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'fr' ? 'Rationnement Matières %' : 'Raw Materials Ratio %'}</span>
+                           <span className="text-xs font-bold text-farm-400 bg-farm-500/10 px-2 py-0.5 rounded border border-farm-500/20">Total: 100%</span>
+                        </div>
+                        
+                        <div className="space-y-4">
+                           {/* Maïs */}
+                           <div>
+                              <div className="flex justify-between text-xs font-bold text-slate-300 mb-1.5">
+                                 <span className="flex items-center gap-1.5">🌽 {language === 'fr' ? 'Maïs (Énergie)' : 'Corn (Energy)'}</span>
+                                 <span className="text-farm-400 font-mono font-bold">{maisRatio}%</span>
+                              </div>
+                              <input 
+                                 type="range" 
+                                 min="20" 
+                                 max="75" 
+                                 value={maisRatio} 
+                                 onChange={(e) => {
+                                    const nextValue = parseInt(e.target.value);
+                                    if (nextValue + sojaRatio <= 100) {
+                                       setMaisRatio(nextValue);
+                                    } else {
+                                       setMaisRatio(nextValue);
+                                       setSojaRatio(100 - nextValue);
+                                    }
+                                 }}
+                                 className="w-full h-1.5 bg-slate-805 rounded-lg appearance-none cursor-pointer accent-farm-500" 
+                              />
+                           </div>
+
+                           {/* Soja */}
+                           <div>
+                              <div className="flex justify-between text-xs font-bold text-slate-300 mb-1.5">
+                                 <span className="flex items-center gap-1.5">🌱 {language === 'fr' ? 'Soja (Protéines)' : 'Soybean (Protein)'}</span>
+                                 <span className="text-farm-400 font-mono font-bold">{sojaRatio}%</span>
+                              </div>
+                              <input 
+                                 type="range" 
+                                 min="10" 
+                                 max="50" 
+                                 value={sojaRatio} 
+                                 onChange={(e) => {
+                                    const nextValue = parseInt(e.target.value);
+                                    if (maisRatio + nextValue <= 100) {
+                                       setSojaRatio(nextValue);
+                                    } else {
+                                       setSojaRatio(nextValue);
+                                       setMaisRatio(100 - nextValue);
+                                    }
+                                 }}
+                                 className="w-full h-1.5 bg-slate-805 rounded-lg appearance-none cursor-pointer accent-emerald-500" 
+                              />
+                           </div>
+
+                           {/* Concentré (computed dynamically) */}
+                           <div className="bg-slate-905 p-3 rounded-xl border border-slate-800/40 flex justify-between items-center">
+                              <span className="text-xs text-slate-400 flex items-center gap-1.5">🧪 {language === 'fr' ? 'Concentré (Minéraux)' : 'Concentrate (Minerals)'}</span>
+                              <span className="text-xs font-black text-slate-200 font-mono bg-slate-800 px-3 py-1 rounded-lg border border-slate-750">{concentreRatio}%</span>
+                           </div>
                         </div>
                      </div>
 
-                     {/* Floating notification alert */}
-                     <div className="absolute top-2 -left-4 z-20 bg-white/95 backdrop-blur-md p-3.5 rounded-2xl shadow-xl border border-gray-50 hover:scale-105 transition-transform duration-300">
-                        <div className="flex items-center gap-3">
-                           <div className="bg-rose-100 p-2 rounded-xl text-rose-600">
-                              <ShoppingCart className="w-4 h-4" />
+                     {/* Live Nutrition Outputs */}
+                     <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-slate-950/60 border border-slate-800/60 p-4 rounded-2xl flex flex-col justify-center">
+                           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1.5">{language === 'fr' ? 'PROTÉINES BRUTES' : 'CRUDE PROTEIN'}</p>
+                           <div className="flex items-baseline gap-1.5">
+                              <span className="text-3xl font-black text-slate-100 font-mono tracking-tight">{proteinLevel}%</span>
+                              <span className="text-[9px] font-bold text-farm-400 uppercase tracking-wider bg-farm-500/10 px-1.5 py-0.5 rounded border border-farm-500/20">
+                                 {proteinLevel >= 19 ? 'Ultra' : proteinLevel >= 15 ? 'Optimum' : 'Eco'}
+                              </span>
                            </div>
-                           <div className="text-left">
-                              <div className="text-[9px] font-black text-slate-400 uppercase tracking-wider">{t('landing.stock_alert')}</div>
-                              <div className="text-xs font-black text-slate-800">{t('landing.feed_alert')}</div>
+                        </div>
+                        
+                        <div className="bg-slate-950/60 border border-slate-800/60 p-4 rounded-2xl flex flex-col justify-center">
+                           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1.5">{language === 'fr' ? 'COÛT ESTIMÉ' : 'ESTIMATED COST'}</p>
+                           <div className="flex items-baseline gap-1">
+                              <span className="text-3xl font-black text-slate-100 font-mono tracking-tight">{costPerKg}</span>
+                              <span className="text-[10px] font-bold text-slate-500">FCFA</span>
                            </div>
                         </div>
                      </div>
 
-                     {/* Floating analytics alert */}
-                     <div className="absolute bottom-2 -right-4 z-20 bg-white/95 backdrop-blur-md p-3.5 rounded-2xl shadow-xl border border-gray-50 hover:scale-105 transition-transform duration-300">
-                        <div className="flex items-center gap-3">
-                           <div className="bg-emerald-100 p-2 rounded-xl text-emerald-600">
-                              <BarChart3 className="w-4 h-4" />
-                           </div>
-                           <div className="text-left">
-                              <div className="text-[9px] font-black text-slate-400 uppercase tracking-wider font-sans">Performance</div>
-                              <div className="text-xs font-black text-slate-800">{t('landing.sales_increase')}</div>
-                           </div>
+                     {/* Recommendation Badge */}
+                     <div className="bg-slate-955 border border-slate-800/40 p-3.5 rounded-2xl flex flex-col sm:flex-row gap-2 items-center justify-between">
+                        <div className="flex items-center gap-2">
+                           <span className="flex relative h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                           </span>
+                           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                              {language === 'fr' ? 'Formule recommandée' : 'Target formulation'}
+                           </span>
                         </div>
+                        <span className="text-[11px] font-black text-farm-400 uppercase tracking-widest bg-farm-950 border border-farm-900/40 px-3.5 py-1 rounded-xl shadow-inner">
+                           {getRecommendation()}
+                        </span>
                      </div>
                   </div>
 
-                  <div className="flex items-center justify-between relative z-10 w-full border-t border-gray-100 pt-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  {/* Simulator Footer */}
+                  <div className="flex items-center justify-between relative z-10 w-full border-t border-slate-800 pt-4 text-[10px] font-mono text-slate-500 uppercase tracking-widest">
                      <div className="flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5 text-farm-600" />
-                        <span>{t('landing.synchronized')}</span>
+                        <Clock className="w-3.5 h-3.5 text-farm-500" />
+                        <span>{language === 'fr' ? 'SIMULATEUR DE FORMULATION' : 'FORMULATION SANDBOX'}</span>
                      </div>
-                     <span>{t('landing.secured_engine')}</span>
+                     <span className="text-emerald-500 font-bold">{language === 'fr' ? 'GÉNÉRATEUR' : 'PREMIX GENERATOR'}</span>
                   </div>
                </div>
             </div>
@@ -322,11 +412,14 @@ export const Landing: React.FC<LandingProps> = ({ onLoginClick }) => {
 };
 
 const FeatureCard = ({ icon: Icon, title, desc }: any) => (
-  <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all">
-     <div className="w-12 h-12 bg-farm-50 rounded-xl flex items-center justify-center text-farm-600 mb-6">
-        <Icon className="w-6 h-6" />
+  <div className="bg-white p-8 rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.015)] border border-gray-100 hover:border-farm-100 hover:shadow-[0_20px_40px_rgba(0,0,0,0.035)] hover:-translate-y-1.5 transition-all duration-300 relative group overflow-hidden">
+     {/* Hover gradient border accent */}
+     <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-farm-500 via-emerald-500 to-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+     
+     <div className="w-12 h-12 bg-gradient-to-tr from-farm-500/10 to-emerald-500/5 text-farm-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+        <Icon className="w-5.5 h-5.5 animate-none" />
      </div>
-     <h3 className="text-xl font-bold text-gray-900 mb-3">{title}</h3>
-     <p className="text-gray-500 leading-relaxed">{desc}</p>
+     <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-farm-700 transition-colors">{title}</h3>
+     <p className="text-gray-500 leading-relaxed text-sm font-medium">{desc}</p>
   </div>
 );

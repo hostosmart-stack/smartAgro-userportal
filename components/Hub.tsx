@@ -175,15 +175,13 @@ export const Hub: React.FC<HubProps> = ({
           </div>
         </div>
 
-        {/* Dynamic Navigation Links */}
-        <div className="hidden lg:flex items-center gap-8 font-sans">
-          <a href="#" className="text-xs font-black text-farm-600 dark:text-farm-400 uppercase tracking-wider transition-all flex items-center gap-1.5 bg-farm-50 dark:bg-farm-950/20 px-3.5 py-1.5 rounded-xl border border-farm-200/20">
+        {/* Dynamic Navigation Links arranged elegantly */}
+        <div className="hidden lg:flex items-center gap-2 font-sans bg-slate-100/60 dark:bg-slate-800/40 p-1 rounded-2xl border border-slate-200/40 dark:border-slate-800/40 shadow-inner">
+          <a href="#" className="text-xs font-black text-farm-600 dark:text-farm-400 uppercase tracking-wider transition-all flex items-center gap-1.5 bg-white dark:bg-slate-900 px-4 py-2 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800/20">
             <span>{t('hub.nav.home')}</span>
             <span className="w-1.5 h-1.5 rounded-full bg-farm-500 animate-pulse"></span>
           </a>
-          <a href="#services" className="text-xs font-black text-slate-500 hover:text-farm-600 dark:hover:text-farm-400 uppercase tracking-wider transition-colors px-3 py-1.5">{t('hub.nav.modules')}</a>
-          <a href="#" className="text-xs font-black text-slate-500 hover:text-farm-600 dark:hover:text-farm-400 uppercase tracking-wider transition-colors px-3 py-1.5">{t('hub.nav.technical')}</a>
-          <a href="#" className="text-xs font-black text-slate-500 hover:text-farm-600 dark:hover:text-farm-400 uppercase tracking-wider transition-colors px-3 py-1.5">{t('hub.nav.assistance')}</a>
+          <a href="#services" className="text-xs font-black text-slate-500 hover:text-slate-805 dark:hover:text-slate-100 uppercase tracking-wider transition-all px-4 py-2 hover:bg-white/40 dark:hover:bg-slate-800/30 rounded-xl">{t('hub.nav.modules')}</a>
         </div>
 
         {/* Action Controls & Logout */}
@@ -428,7 +426,6 @@ export const Hub: React.FC<HubProps> = ({
 
           <div className="flex flex-wrap justify-center gap-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
             <a href="#" className="hover:text-blue-600 transition-colors">{t('landing.privacy')}</a>
-            <a href="#" className="hover:text-blue-600 transition-colors">{t('hub.nav.assistance')}</a>
             <a href="#" className="hover:text-blue-600 transition-colors">{t('landing.terms')}</a>
           </div>
 

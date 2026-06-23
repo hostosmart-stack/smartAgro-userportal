@@ -22,7 +22,7 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
   const { notify } = useNotifications();
   const { t, language } = useLanguage();
 
-  const isSuperAdminUser = userRole.toLowerCase().trim() === 'superadmin' || userRole.toLowerCase().trim() === 'super-admin';
+  const isSuperAdminUser = userRole.toLowerCase().trim() === 'superadmin' || userRole.toLowerCase().trim() === 'super-admin' || userRole.toLowerCase().trim() === 'system-admin';
 
   const translateRoleName = (roleName: string) => {
     if (!roleName) return '';
@@ -577,8 +577,8 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
 
          {/* Mobile View: Cards */}
          <div className="md:hidden divide-y divide-gray-50">
-            {filteredEmployees.map(emp => (
-                <div key={emp.id} className="p-4 bg-white active:bg-gray-50 transition-colors" onClick={() => setViewingEmployee(emp)}>
+            {filteredEmployees.map((emp, idx) => (
+                <div key={emp.id || `emp-card-${idx}`} className="p-4 bg-white active:bg-gray-50 transition-colors" onClick={() => setViewingEmployee(emp)}>
                     <div className="flex justify-between items-start mb-3">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-farm-100 flex items-center justify-center text-farm-700 font-bold text-sm">
@@ -655,8 +655,8 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                    {filteredEmployees.map(emp => (
-                        <tr key={emp.id} className="hover:bg-gray-50/80 transition-colors group cursor-pointer" onClick={() => setViewingEmployee(emp)}>
+                    {filteredEmployees.map((emp, idx) => (
+                        <tr key={emp.id || `emp-row-${idx}`} className="hover:bg-gray-50/80 transition-colors group cursor-pointer" onClick={() => setViewingEmployee(emp)}>
                             <td className="px-6 py-4">
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-full bg-farm-100 flex items-center justify-center text-farm-700 font-bold text-xs">
@@ -740,8 +740,8 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
                 const isSuper = r.name.toLowerCase().trim() === 'superadmin' || r.name.toLowerCase().trim() === 'super-admin';
                 return isSuperAdminUser || !isSuper;
               })
-              .map(role => (
-                <div key={role.id} className="bg-white rounded-3xl shadow-glass border border-gray-100/50 p-6 flex flex-col hover:shadow-xl transition-all group">
+              .map((role, idx) => (
+                <div key={role.id || `role-${idx}`} className="bg-white rounded-3xl shadow-glass border border-gray-100/50 p-6 flex flex-col hover:shadow-xl transition-all group">
                     <div className="flex justify-between items-start mb-4">
                         <div className="p-3 bg-farm-50 rounded-2xl text-farm-600">
                             <Shield className="w-6 h-6" />
@@ -763,8 +763,8 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
                     </div>
                     <h3 className="text-xl font-bold text-gray-900 mb-2">{translateRoleName(role.name)}</h3>
                     <div className="flex flex-wrap gap-2 mt-auto">
-                        {role.permissions.map(p => (
-                            <span key={p} className="px-2 py-1 bg-gray-50 text-gray-500 text-[10px] font-bold rounded-lg border border-gray-100 uppercase tracking-wider">
+                        {(role.permissions || []).map((p, pIdx) => (
+                            <span key={p ? `${p}-${pIdx}` : `perm-${pIdx}`} className="px-2 py-1 bg-gray-50 text-gray-500 text-[10px] font-bold rounded-lg border border-gray-100 uppercase tracking-wider">
                                 {availablePermissions.find(ap => ap.id === p)?.label || p}
                             </span>
                         ))}
@@ -846,8 +846,8 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
                                         <td colSpan={4} className="px-4 py-8 text-center text-gray-400">Aucun paiement enregistré.</td>
                                     </tr>
                                 ) : (
-                                    getEmployeeHistory(viewingEmployee.id).map(exp => (
-                                        <tr key={exp.id} className="hover:bg-gray-50 transition-colors">
+                                    getEmployeeHistory(viewingEmployee.id).map((exp, idx) => (
+                                        <tr key={exp.id || `exp-${idx}`} className="hover:bg-gray-50 transition-colors">
                                             <td className="px-4 py-3 text-gray-600">{new Date(exp.date).toLocaleDateString()}</td>
                                             <td className="px-4 py-3">
                                                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${exp.category === 'SALAIRE' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
@@ -982,11 +982,11 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
                                  const isSuperRole = r.name.toLowerCase().trim() === 'superadmin' || r.name.toLowerCase().trim() === 'super-admin';
                                  return isSuperAdminUser || !isSuperRole;
                                })
-                               .map(r => {
+                               .map((r, idx) => {
                                  const selectedRoleIds = form.roleIds || (form.roleId ? [form.roleId] : []);
                                  const isChecked = selectedRoleIds.includes(r.id);
                                  return (
-                                   <label key={r.id} className="flex items-center gap-2 p-1.5 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors text-xs font-medium text-gray-700">
+                                   <label key={r.id || `avail-role-${idx}`} className="flex items-center gap-2 p-1.5 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors text-xs font-medium text-gray-700">
                                        <input 
                                            type="checkbox" 
                                            checked={isChecked}
@@ -1024,8 +1024,8 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
                               return aggregatedPermissions.length > 0 && (
                                   <div className="mt-2 flex flex-wrap gap-1">
                                       <span className="text-[9px] text-gray-400 w-full mb-1">Permissions cumulées :</span>
-                                      {aggregatedPermissions.map(p => (
-                                          <span key={p} className="px-1.5 py-0.5 bg-gray-100 text-gray-500 text-[9px] font-bold rounded uppercase animate-in fade-in zoom-in-95">
+                                      {aggregatedPermissions.map((p, idx) => (
+                                          <span key={p ? `${p}-${idx}` : `agg-perm-${idx}`} className="px-1.5 py-0.5 bg-gray-100 text-gray-500 text-[9px] font-bold rounded uppercase animate-in fade-in zoom-in-95">
                                               {availablePermissions.find(ap => ap.id === p)?.label || p}
                                           </span>
                                       ))}
@@ -1038,8 +1038,8 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
                         <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1"><Store className="w-3 h-3"/> Boutique</label>
                         <select className="w-full p-3 border border-gray-200 rounded-xl text-sm bg-white outline-none" value={form.assignedBoutique} onChange={e => setForm({...form, assignedBoutique: e.target.value as any})}>
                             <option value="Toutes">Toutes (Admin)</option>
-                            {boutiques.map(b => (
-                                <option key={b.id} value={b.id}>{b.name}</option>
+                            {boutiques.map((b, idx) => (
+                                <option key={b.id || `boutique-opt-${idx}`} value={b.id}>{b.name}</option>
                             ))}
                         </select>
                     </div>
@@ -1154,11 +1154,11 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
                                       
                                       {roleForm.permissions?.includes(perm.id) && perm.components && (
                                           <div className="p-4 bg-gray-50/50 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                              {perm.components.map(comp => {
+                                              {perm.components.map((comp, compIdx) => {
                                                   const isVisible = roleForm.pagePermissions?.find(p => p.pageId === perm.id)?.components.find(c => c.id === comp.id)?.visible ?? true;
                                                   return (
                                                       <button
-                                                          key={comp.id}
+                                                          key={comp.id || `comp-${compIdx}`}
                                                           onClick={() => toggleComponentVisibility(perm.id, comp.id)}
                                                           className={`flex items-center gap-2 p-2 rounded-lg border text-[10px] font-bold uppercase tracking-wider transition-all ${isVisible ? 'bg-white border-farm-200 text-farm-600 shadow-sm' : 'bg-gray-100 border-gray-200 text-gray-400'}`}
                                                       >

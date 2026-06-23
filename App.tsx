@@ -333,7 +333,62 @@ const InnerApp = () => {
                       defaultSystemRolesObj[0];
 
   const userRole = userRoleObj?.name || 'Admin'; 
-  const userPermissions = userRoleObj?.permissions || [];
+
+  const getUserPermissions = (roleObj: any): string[] => {
+    if (!roleObj) return [];
+    
+    const normName = (roleObj.name || '').toLowerCase().trim();
+    const isSuperOrAdmin = normName === 'superadmin' || normName === 'admin' || normName === 'system-admin';
+    
+    const allViews: string[] = ['dashboard', 'inventory', 'transfers', 'pos', 'analytics', 'accounting', 'invoices', 'employees', 'boutiques', 'advisor', 'settings', 'guide', 'reports', 'formulas'];
+
+    const pagePerms = roleObj.pagePermissions;
+    if (pagePerms) {
+      if (Array.isArray(pagePerms)) {
+        return allViews.filter(view => {
+          const found = pagePerms.find((p: any) => p.pageId === view);
+          if (found !== undefined) return found.enabled !== false;
+          
+          let parentPerm = view;
+          if (view === 'analytics' || view === 'accounting') parentPerm = 'reports';
+          if (view === 'boutiques') parentPerm = 'settings';
+          if (view === 'formulas') parentPerm = 'inventory';
+
+          if (parentPerm !== view) {
+            const parentFound = pagePerms.find((p: any) => p.pageId === parentPerm);
+            if (parentFound !== undefined) return parentFound.enabled !== false;
+          }
+
+          return isSuperOrAdmin;
+        });
+      } else if (typeof pagePerms === 'object') {
+        return allViews.filter(view => {
+          if (view in pagePerms) {
+            return !!pagePerms[view];
+          }
+
+          let parentPerm = view;
+          if (view === 'analytics' || view === 'accounting') parentPerm = 'reports';
+          if (view === 'boutiques') parentPerm = 'settings';
+          if (view === 'formulas') parentPerm = 'inventory';
+
+          if (parentPerm in pagePerms) {
+            return !!pagePerms[parentPerm];
+          }
+
+          return isSuperOrAdmin;
+        });
+      }
+    }
+
+    if (roleObj.permissions && Array.isArray(roleObj.permissions)) {
+      return roleObj.permissions as string[];
+    }
+
+    return isSuperOrAdmin ? allViews : ['dashboard', 'guide'];
+  };
+
+  const userPermissions = getUserPermissions(userRoleObj) as any[];
   const userBoutique = currentEmployee?.assignedBoutique || 'Toutes';
   const currentProvenderie = provenderies.find(p => p.id === currentProvenderieId);
 
@@ -441,7 +496,7 @@ const InnerApp = () => {
 
   const renderContent = () => {
     // If no category selected, show the Hub (unless in specific non-dashboard views like profile/settings)
-    if (!activeCategory && ['dashboard', 'inventory', 'transfers', 'pos', 'analytics', 'accounting', 'invoices', 'employees', 'boutiques', 'provenderies', 'advisor'].includes(currentView)) {
+    if (!activeCategory && ['dashboard', 'inventory', 'transfers', 'pos', 'analytics', 'accounting', 'invoices', 'employees', 'boutiques', 'advisor'].includes(currentView)) {
       return <Hub 
         onSelectCategory={(cat) => {
           setActiveCategory(cat);
@@ -475,32 +530,33 @@ const InnerApp = () => {
       'invoices': 'invoices',
       'employees': 'employees',
       'boutiques': 'settings',
-      'provenderies': 'settings',
       'advisor': 'dashboard',
       'settings': 'settings',
       'guide': 'guide'
     };
 
     const requiredPermission = viewPermissions[currentView] as Permission;
-    let hasPermission = userRole === 'Admin' || userRole === 'superadmin' || !requiredPermission || userPermissions.includes(requiredPermission);
+    const normRole = (userRole || 'Admin').toLowerCase().trim();
+    const isSuperOrAdmin = normRole === 'admin' || normRole === 'superadmin' || normRole === 'system-admin';
 
-    if (currentView === 'provenderies') {
-      hasPermission = userRole === 'superadmin';
-    }
+    let hasPermission = isSuperOrAdmin || 
+                        userPermissions.includes(currentView) || 
+                        (requiredPermission && userPermissions.includes(requiredPermission as any));
 
     if (!hasPermission) {
       // Find first allowed view
-      const allowedViews = Object.keys(viewPermissions).filter(v => 
-        userRole === 'Admin' || userPermissions.includes(viewPermissions[v] as Permission)
-      );
+      const allowedViews = Object.keys(viewPermissions).filter(v => {
+        const reqPerm = viewPermissions[v];
+        return isSuperOrAdmin || userPermissions.includes(v) || (reqPerm && userPermissions.includes(reqPerm as any));
+      });
       if (allowedViews.length > 0 && currentView !== allowedViews[0]) {
-        setCurrentView(allowedViews[0]);
+        setTimeout(() => setCurrentView(allowedViews[0]), 0);
       }
       return <div className="flex items-center justify-center h-full text-gray-500">Accès non autorisé</div>;
     }
 
     switch (currentView) {
-      case 'dashboard': return <Dashboard products={filteredProducts} invoices={filteredInvoices} boutiques={filteredBoutiques} onNavigate={setCurrentView} userRole={userRole} userBoutique={userBoutique} userRoleObj={userRoleObj} userName={currentEmployee?.name || 'Administrateur'} userEmail={currentEmployee?.email || ''} />;
+      case 'dashboard': return <Dashboard products={filteredProducts} invoices={filteredInvoices} boutiques={filteredBoutiques} transfers={filteredTransfers} onNavigate={setCurrentView} userRole={userRole} userBoutique={userBoutique} userRoleObj={userRoleObj} userName={currentEmployee?.name || 'Administrateur'} userEmail={currentEmployee?.email || ''} />;
       case 'inventory': return <Inventory products={filteredProducts} userRole={userRole} userPermissions={userPermissions} userBoutique={userBoutique} boutiques={filteredBoutiques} onNavigate={setCurrentView} onTransferProduct={(id) => { setPreSelectedTransferProduct(id); setCurrentView('transfers'); }} currentProvenderieId={currentProvenderieId} />;
       case 'transfers': return <Transfers products={filteredProducts} transfers={filteredTransfers} boutiques={filteredBoutiques} userRole={userRole} userBoutique={userBoutique} userName={currentEmployee?.name || 'Administrateur'} preSelectedProductId={preSelectedTransferProduct} onClearPreSelection={() => setPreSelectedTransferProduct(null)} currentProvenderieId={currentProvenderieId} />;
       case 'pos': return <POS products={filteredProducts} employees={filteredEmployees} invoices={filteredInvoices} expenses={filteredExpenses} customers={filteredCustomers} onCheckout={handleCheckout} onAddExpense={handleAddExpense} onVoidLastSale={handleVoidLastSale} userBoutique={userBoutique} userRole={userRole} userPermissions={userPermissions} boutiques={filteredBoutiques} companyName={settings.companyName} userName={currentEmployee?.name || 'Administrateur'} currentProvenderieId={currentProvenderieId} provenderies={provenderies} />;
@@ -509,17 +565,6 @@ const InnerApp = () => {
       case 'invoices': return <Invoices invoices={filteredInvoices} products={filteredProducts} setProducts={setProducts} onUpdateInvoice={handleUpdateInvoice} boutiques={filteredBoutiques} companyName={settings.companyName} userRole={userRole} userPermissions={userPermissions} userBoutique={userBoutique} customers={filteredCustomers} currentProvenderieId={currentProvenderieId} provenderies={provenderies} />;
       case 'employees': return <Employees employees={filteredEmployees} roles={filteredRoles} boutiques={filteredBoutiques} expenses={filteredExpenses} userRole={userRole} userBoutique={userBoutique} currentProvenderieId={currentProvenderieId} />;
       case 'boutiques': return <Boutiques products={filteredProducts} boutiques={filteredBoutiques} userRole={userRole} userBoutique={userBoutique} transfers={filteredTransfers} currentProvenderieId={currentProvenderieId} userRoleObj={userRoleObj} />;
-      case 'provenderies': return (
-        <ProvenderieAdmin 
-          currentProvenderieId={currentProvenderieId} 
-          onSelect={(id) => {
-            setCurrentProvenderieId(id);
-            localStorage.setItem('smartAgro_currentProvenderieId', id);
-          }}
-          onBack={() => setCurrentView('dashboard')}
-          isInsideApp={true}
-        />
-      );
       case 'advisor': return <Assistant products={filteredProducts} invoices={filteredInvoices} boutiques={filteredBoutiques} employees={filteredEmployees} expenses={filteredExpenses} userRole={userRole} userBoutique={userBoutique} />;
       case 'settings': return <Settings currentSettings={settings} onSettingsChange={setSettings} currentProvenderie={currentProvenderie} />;
       case 'guide': return <Guide userRole={userRole} />;
@@ -534,7 +579,7 @@ const InnerApp = () => {
         expenses={expenses}
         currentEmployee={currentEmployee}
       />;
-      default: return <Dashboard products={products} invoices={invoices} boutiques={boutiques} onNavigate={setCurrentView} />;
+      default: return <Dashboard products={products} invoices={invoices} boutiques={boutiques} transfers={transfers} onNavigate={setCurrentView} />;
     }
   };
 

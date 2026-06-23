@@ -265,7 +265,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'common.all_categories': "Tous les rayons",
 
     // Landing
-    'landing.connexion_admin': 'Connexion Espace Admin',
+    'landing.connexion_admin': 'Accéder au système',
     'landing.solution_provenderies': 'Solution #1 pour Provenderies',
     'landing.title_main': 'Comment gérer votre',
     'landing.title_main_bold': 'provenderie ?',
@@ -622,7 +622,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'common.all_categories': "All Categories",
 
     // Landing
-    'landing.connexion_admin': 'Admin Portal Connection',
+    'landing.connexion_admin': 'Access System',
     'landing.solution_provenderies': '#1 Solution for Feed Mills',
     'landing.title_main': 'How to manage your',
     'landing.title_main_bold': 'feed mill?',

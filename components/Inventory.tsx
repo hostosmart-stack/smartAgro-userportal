@@ -156,6 +156,31 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
         return;
     }
 
+    if (!editForm.category) {
+        notify("La catégorie est requise", "error");
+        return;
+    }
+
+    if (!editForm.unit || !editForm.unit.trim()) {
+        notify("Veuillez sélectionner une unité de stock (ex: kg, sac)", "error");
+        return;
+    }
+
+    if (editForm.price !== undefined && (isNaN(Number(editForm.price)) || Number(editForm.price) < 0)) {
+        notify("Le prix de vente par défaut doit être supérieur ou égal à 0", "error");
+        return;
+    }
+
+    if (editForm.costPrice !== undefined && (isNaN(Number(editForm.costPrice)) || Number(editForm.costPrice) < 0)) {
+        notify("Le prix d'achat par défaut doit être supérieur ou égal à 0", "error");
+        return;
+    }
+
+    if (editForm.stock !== undefined && (isNaN(Number(editForm.stock)) || Number(editForm.stock) < 0)) {
+        notify("Le stock initial doit être supérieur ou égal à 0", "error");
+        return;
+    }
+
     setIsSubmitting(true);
     try {
       if (isEditingVariant && editingId) {
@@ -269,33 +294,42 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
   };
 
   const addVariant = () => {
-    if (variantName.trim()) {
-      const currentVariants = editForm.variants || [];
-      const trimmedName = variantName.trim();
-      const existingIndex = currentVariants.findIndex(v => (v.name || '').toLowerCase() === trimmedName.toLowerCase());
-
-      const newVariant: ProductVariant = {
-        name: trimmedName,
-        price: variantPrice ? parseFloat(variantPrice) : (editForm.price || 0),
-        wholesalePrice: variantWholesalePrice ? parseFloat(variantWholesalePrice) : undefined,
-        costPrice: variantCostPrice ? parseFloat(variantCostPrice) : undefined,
-        stock: existingIndex >= 0 ? currentVariants[existingIndex].stock : 0
-      };
-
-      let updatedVariants;
-      if (existingIndex >= 0) {
-          updatedVariants = [...currentVariants];
-          updatedVariants[existingIndex] = newVariant;
-      } else {
-          updatedVariants = [...currentVariants, newVariant];
-      }
-
-      setEditForm({ ...editForm, variants: updatedVariants });
-      setVariantName('');
-      setVariantPrice('');
-      setVariantWholesalePrice('');
-      setVariantCostPrice('');
+    const trimmedName = variantName.trim();
+    if (!trimmedName) {
+      notify("Veuillez saisir un nom pour la variante (ex: Sac 50kg)", "error");
+      return;
     }
+
+    const priceNum = variantPrice ? parseFloat(variantPrice) : (editForm.price || 0);
+    if (isNaN(priceNum) || priceNum < 0) {
+      notify("Le prix de vente de la variante doit être supérieur ou égal à 0", "error");
+      return;
+    }
+
+    const currentVariants = editForm.variants || [];
+    const existingIndex = currentVariants.findIndex(v => (v.name || '').toLowerCase() === trimmedName.toLowerCase());
+
+    const newVariant: ProductVariant = {
+      name: trimmedName,
+      price: priceNum,
+      wholesalePrice: variantWholesalePrice ? parseFloat(variantWholesalePrice) : undefined,
+      costPrice: variantCostPrice ? parseFloat(variantCostPrice) : undefined,
+      stock: existingIndex >= 0 ? currentVariants[existingIndex].stock : 0
+    };
+
+    let updatedVariants;
+    if (existingIndex >= 0) {
+        updatedVariants = [...currentVariants];
+        updatedVariants[existingIndex] = newVariant;
+    } else {
+        updatedVariants = [...currentVariants, newVariant];
+    }
+
+    setEditForm({ ...editForm, variants: updatedVariants });
+    setVariantName('');
+    setVariantPrice('');
+    setVariantWholesalePrice('');
+    setVariantCostPrice('');
   };
 
   const removeVariant = (index: number) => {
@@ -305,12 +339,46 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
 
   // --- Restock Logic ---
   const handleRestockSubmit = async () => {
-    if (!restockingProductId || restockForm.quantity <= 0 || isSubmitting) return;
+    if (isSubmitting) return;
+
+    if (!restockingProductId) {
+       notify("Erreur: Aucun produit sélectionné pour le réapprovisionnement", "error");
+       return;
+    }
+
+    if (!restockForm.quantity || isNaN(restockForm.quantity) || restockForm.quantity <= 0) {
+       notify("Veuillez saisir une quantité supérieure à 0", "error");
+       return;
+    }
+
+    if (!restockForm.date) {
+       notify("Veuillez spécifier une date de réapprovisionnement", "error");
+       return;
+    }
+
+    if (restockForm.buyingPrice && (isNaN(parseFloat(restockForm.buyingPrice)) || parseFloat(restockForm.buyingPrice) < 0)) {
+       notify("Le prix d'achat doit être supérieur ou égal à 0", "error");
+       return;
+    }
+
+    if (restockForm.sellingPrice && (isNaN(parseFloat(restockForm.sellingPrice)) || parseFloat(restockForm.sellingPrice) < 0)) {
+       notify("Le prix de vente doit être supérieur ou égal à 0", "error");
+       return;
+    }
+
+    if (restockForm.wholesalePrice && (isNaN(parseFloat(restockForm.wholesalePrice)) || parseFloat(restockForm.wholesalePrice) < 0)) {
+       notify("Le prix de gros doit être supérieur ou égal à 0", "error");
+       return;
+    }
     
     setIsSubmitting(true);
     try {
       const p = products.find(prod => prod.id === restockingProductId);
-      if (!p) return;
+      if (!p) {
+         notify("Erreur: Le produit sélectionné n'existe pas", "error");
+         setIsSubmitting(false);
+         return;
+      }
 
       const roundedQty = Math.round(restockForm.quantity * 100) / 100;
       const newCostPrice = parseFloat(restockForm.buyingPrice) || 0;
@@ -544,6 +612,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
           productToSave = {
               ...existingFormula,
               name: mixName, // Update name in case it changed
+              category: mixCategory, // Update category as selected by the user
               recipe: recipe,
               // We don't change stock here
           };
@@ -552,15 +621,16 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
           productToSave = {
             id: `FORM-${Date.now().toString().slice(-6)}`,
             name: mixName,
-            category: Category.POULTRY, // Default category since we removed the selector
+            category: mixCategory, // Use dynamic mixCategory
             price: 0,
             wholesalePrice: 0,
-            costPrice: 0, 
+            costPrice: 0,
             stock: 0,
             unit: 'kg',
             description: `Formule maison.`,
             variants: [],
             recipe: recipe,
+            provenderieId: currentProvenderieId,
             history: [{
               id: Date.now().toString(),
               date: new Date().toISOString(),
@@ -732,12 +802,13 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
             category: mixCategory,
             price: 0,
             wholesalePrice: 0,
-            costPrice: 0, 
+            costPrice: 0,
             stock: targetWeightInKg,
             unit: 'kg',
             description: `Formule maison.`,
-            variants: [], 
+            variants: [],
             recipe: recipe,
+            provenderieId: currentProvenderieId,
             history: [{
               id: Date.now().toString(),
               date: new Date().toISOString(),
@@ -1115,17 +1186,28 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
 
                         {/* Right: Editor */}
                         <div className="w-full md:w-2/3 flex flex-col bg-white flex-1 animate-in slide-in-from-right-5 duration-200 overflow-hidden">
-                            <div className="p-3 md:p-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
-                                <div className="flex-1 mr-4">
+                            <div className="p-3 md:p-4 border-b border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+                                <div className="flex-1 w-full sm:w-auto mr-0 sm:mr-4">
                                     <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Nom de la Formule</label>
                                     <input 
-                                        className="w-full p-2 border border-gray-300 rounded-lg text-base md:text-lg font-bold focus:ring-2 focus:ring-farm-500 outline-none" 
+                                        className="w-full p-2 border border-gray-300 rounded-lg text-base font-bold focus:ring-2 focus:ring-farm-500 outline-none animate-none" 
                                         placeholder="Ex: Aliment Démarrage" 
                                         value={mixName} 
                                         onChange={e => setMixName(e.target.value)} 
                                     />
                                 </div>
-                                <button onClick={() => setIsEditingFormula(false)} className="text-gray-400 hover:text-gray-600 p-2 shrink-0">
+                                <div className="w-full sm:w-48 shrink-0">
+                                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Catégorie</label>
+                                    <select 
+                                        value={mixCategory} 
+                                        onChange={e => setMixCategory(e.target.value as Category)}
+                                        className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-farm-500 outline-none font-bold text-gray-700"
+                                    >
+                                        <option value={Category.POULTRY}>{Category.POULTRY}</option>
+                                        <option value={Category.LIVESTOCK}>{Category.LIVESTOCK}</option>
+                                    </select>
+                                </div>
+                                <button onClick={() => setIsEditingFormula(false)} className="text-gray-400 hover:text-gray-600 p-2 shrink-0 self-end sm:self-center">
                                     <X className="w-5 h-5"/>
                                 </button>
                             </div>

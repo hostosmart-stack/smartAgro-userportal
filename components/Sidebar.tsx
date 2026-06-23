@@ -71,14 +71,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'analytics', label: t('nav.analytics'), icon: BarChart3, permission: 'reports', category: 'comptabilite' }, 
     { id: 'accounting', label: t('nav.accounting'), icon: Calculator, permission: 'reports', category: 'comptabilite' },
     { id: 'employees', label: t('nav.employees'), icon: Users, permission: 'employees', category: 'administration' },
-    { id: 'provenderies', label: t('nav.provenderies'), icon: Store, permission: 'superadmin', category: 'administration' },
     { id: 'guide', label: t('nav.guide'), icon: BookOpen, permission: 'guide', category: 'always' },
     { id: 'settings', label: t('nav.settings'), icon: Settings, permission: 'settings', category: 'administration' },
   ].filter(item => {
-    // Role/Permission filter
-    const hasPermission = item.id === 'provenderies' 
-      ? userRole === 'superadmin' 
-      : (userRole === 'Admin' || userRole === 'superadmin' || userPermissions.includes(item.permission));
+    // Role/Permission filter using userRole and userPermissions
+    const normRole = (userRole || 'Admin').toLowerCase().trim();
+    const isSuperOrAdmin = normRole === 'admin' || normRole === 'superadmin' || normRole === 'system-admin';
+    const hasPermission = isSuperOrAdmin || 
+                          userPermissions.includes(item.id) || 
+                          (item.permission && userPermissions.includes(item.permission));
     
     if (!hasPermission) return false;
 
