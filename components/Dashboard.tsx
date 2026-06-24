@@ -18,6 +18,7 @@ interface DashboardProps {
   userRoleObj?: UserRole;
   userName?: string;
   userEmail?: string;
+  parentActiveCategory?: string | null;
 }
 
 type TimeRange = 'today' | 'week' | 'month' | 'year' | 'all';
@@ -33,7 +34,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   userBoutique = 'Toutes', 
   userRoleObj,
   userName,
-  userEmail
+  userEmail,
+  parentActiveCategory
 }) => {
   const { t } = useLanguage();
   const { notify } = useNotifications();
@@ -48,8 +50,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   cleanRole.includes('administrateur') || 
                   cleanRole.includes('admin') || 
                   (cleanRole.includes('super') && cleanRole.includes('admin'));
-  const isMagasinier = userRole.toLowerCase().includes('magasinier');
-  const isCaissier = userRole.toLowerCase().includes('caissier') || userRole.toLowerCase().includes('vendeur');
+  const isMagasinier = !isAdmin && (parentActiveCategory ? parentActiveCategory === 'magasin' : userRole.toLowerCase().includes('magasinier'));
+  const isCaissier = !isAdmin && (parentActiveCategory ? (parentActiveCategory === 'facturation' || parentActiveCategory === 'comptabilite') : (userRole.toLowerCase().includes('caissier') || userRole.toLowerCase().includes('vendeur')));
 
   // Magasinier-specific computations
   const formulasCount = useMemo(() => {
@@ -950,44 +952,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         </p>
                       )}
                     </div>
-                  </div>
-
-                  {/* Toggle button */}
-                  <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800/40 flex items-center justify-between gap-4">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.1em]">
-                      {canToggle ? 'Contrôle' : 'Lecture seule'}
-                    </span>
-                    
-                    {canToggle ? (
-                      <button
-                        disabled={isToggling}
-                        onClick={() => handleToggleBoutiqueStatus(b.id, b.openStatus)}
-                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-1.5 shadow-sm ${
-                          isOpen 
-                            ? 'bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100/80 active:bg-rose-200' 
-                            : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-100/80 active:bg-emerald-200'
-                        }`}
-                      >
-                        {isToggling ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : isOpen ? (
-                          <>
-                            <Lock className="w-3 h-3" />
-                            Fermer
-                          </>
-                        ) : (
-                          <>
-                            <Unlock className="w-3 h-3" />
-                            Ouvrir
-                          </>
-                        )}
-                      </button>
-                    ) : (
-                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-300 py-1 flex items-center gap-1">
-                        <Lock className="w-3 h-3 text-slate-300" />
-                        Verrouillé
-                      </span>
-                    )}
                   </div>
                 </div>
               );

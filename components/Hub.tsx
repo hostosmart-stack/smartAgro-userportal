@@ -175,63 +175,65 @@ export const Hub: React.FC<HubProps> = ({
     <div className="min-h-full w-full bg-slate-50/20 dark:bg-[#0B1120] flex flex-col font-sans overflow-y-auto selection:bg-blue-500 selection:text-white pb-12">
       
       {/* Navigation Header */}
-      <nav className="w-full bg-white/80 dark:bg-slate-900/85 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800/60 shadow-[0_2px_30px_rgba(0,0,0,0.01)] sticky top-0 z-50 transition-all duration-300 py-3.5 px-6 md:px-16 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="bg-gradient-to-tr from-farm-500 to-emerald-600 p-2.5 rounded-2xl shadow-lg shadow-farm-500/15">
-            <LayoutDashboard className="w-5 h-5 text-white" />
+      <div className="w-full px-4 sm:px-6 md:px-16 pt-4 sticky top-0 z-50 shrink-0">
+        <nav className="w-full bg-white/90 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-250/20 dark:border-slate-800/80 shadow-[0_10px_35px_rgba(0,0,0,0.03)] dark:shadow-[0_10px_35px_rgba(0,0,0,0.4)] rounded-2xl py-3 px-4 md:px-8 flex items-center justify-between transition-all duration-300">
+          <div className="flex items-center gap-3">
+            <div className="bg-gradient-to-tr from-farm-500 to-emerald-600 p-2.5 rounded-2xl shadow-lg shadow-farm-500/15">
+              <LayoutDashboard className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-lg font-display font-black text-slate-900 dark:text-white tracking-tight leading-tight">SMART AGRO</span>
+              <span className="text-[9px] font-black text-farm-500 tracking-wider uppercase leading-none">{t('hub.nav.hub_grid')}</span>
+            </div>
           </div>
-          <div className="flex flex-col">
-            <span className="text-lg font-display font-black text-slate-900 dark:text-white tracking-tight leading-tight">SMART AGRO</span>
-            <span className="text-[9px] font-black text-farm-500 tracking-wider uppercase leading-none">{t('hub.nav.hub_grid')}</span>
+
+          {/* Dynamic Navigation Links arranged elegantly */}
+          <div className="hidden lg:flex items-center gap-2 font-sans bg-slate-100/60 dark:bg-slate-800/40 p-1 rounded-2xl border border-slate-200/40 dark:border-slate-800/40 shadow-inner">
+            <a href="#" className="text-xs font-black text-farm-600 dark:text-farm-400 uppercase tracking-wider transition-all flex items-center gap-1.5 bg-white dark:bg-slate-900 px-4 py-2 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800/20">
+              <span>{t('hub.nav.home')}</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-farm-500 animate-pulse"></span>
+            </a>
+            <a href="#services" className="text-xs font-black text-slate-500 hover:text-slate-805 dark:hover:text-slate-100 uppercase tracking-wider transition-all px-4 py-2 hover:bg-white/40 dark:hover:bg-slate-800/30 rounded-xl">{t('hub.nav.modules')}</a>
           </div>
-        </div>
 
-        {/* Dynamic Navigation Links arranged elegantly */}
-        <div className="hidden lg:flex items-center gap-2 font-sans bg-slate-100/60 dark:bg-slate-800/40 p-1 rounded-2xl border border-slate-200/40 dark:border-slate-800/40 shadow-inner">
-          <a href="#" className="text-xs font-black text-farm-600 dark:text-farm-400 uppercase tracking-wider transition-all flex items-center gap-1.5 bg-white dark:bg-slate-900 px-4 py-2 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800/20">
-            <span>{t('hub.nav.home')}</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-farm-500 animate-pulse"></span>
-          </a>
-          <a href="#services" className="text-xs font-black text-slate-500 hover:text-slate-805 dark:hover:text-slate-100 uppercase tracking-wider transition-all px-4 py-2 hover:bg-white/40 dark:hover:bg-slate-800/30 rounded-xl">{t('hub.nav.modules')}</a>
-        </div>
+          {/* Action Controls & Logout */}
+          <div className="flex items-center gap-3.5">
+            {/* Language Switcher pill */}
+            <div className="flex items-center bg-slate-100/80 dark:bg-slate-800/80 p-0.5 rounded-xl border border-slate-200/50 dark:border-slate-700/50 text-[10px]">
+              <button 
+                onClick={() => setLanguage('fr')} 
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg font-black transition-all ${language === 'fr' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
+              >
+                <span>🇫🇷</span> <span className="hidden sm:inline">FR</span>
+              </button>
+              <button 
+                onClick={() => setLanguage('en')} 
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg font-black transition-all ${language === 'en' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
+              >
+                <span>🇬🇧</span> <span className="hidden sm:inline">EN</span>
+              </button>
+            </div>
 
-        {/* Action Controls & Logout */}
-        <div className="flex items-center gap-3.5">
-          {/* Language Switcher pill */}
-          <div className="flex items-center bg-slate-100/80 dark:bg-slate-800/80 p-0.5 rounded-xl border border-slate-200/50 dark:border-slate-700/50 text-[10px]">
-            <button 
-              onClick={() => setLanguage('fr')} 
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg font-black transition-all ${language === 'fr' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
+            <div className="hidden md:flex flex-col items-end mr-1 text-right font-sans">
+              <span className="text-xs font-black text-slate-850 dark:text-slate-100 uppercase tracking-tight">{userName}</span>
+              <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mt-0.5">{userRole}</span>
+            </div>
+            
+            <button
+              onClick={onLogout}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/50 dark:border-slate-750 text-slate-650 dark:text-slate-350 rounded-xl font-black text-xs hover:bg-rose-50 dark:hover:bg-rose-950/25 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-150 dark:hover:border-rose-900/30 transition-all cursor-pointer active:scale-95 group shadow-sm"
             >
-              <span>🇫🇷</span> <span className="hidden sm:inline">FR</span>
-            </button>
-            <button 
-              onClick={() => setLanguage('en')} 
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg font-black transition-all ${language === 'en' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
-            >
-              <span>🇬🇧</span> <span className="hidden sm:inline">EN</span>
+              <LogOut className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform text-slate-400 group-hover:text-rose-500" />
+              <span className="hidden sm:inline">{t('nav.logout')}</span>
             </button>
           </div>
-
-          <div className="hidden md:flex flex-col items-end mr-1 text-right font-sans">
-            <span className="text-xs font-black text-slate-850 dark:text-slate-100 uppercase tracking-tight">{userName}</span>
-            <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mt-0.5">{userRole}</span>
-          </div>
-          
-          <button
-            onClick={onLogout}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/50 dark:border-slate-750 text-slate-650 dark:text-slate-350 rounded-xl font-black text-xs hover:bg-rose-50 dark:hover:bg-rose-950/25 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-150 dark:hover:border-rose-900/30 transition-all cursor-pointer active:scale-95 group shadow-sm"
-          >
-            <LogOut className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform text-slate-400 group-hover:text-rose-500" />
-            <span className="hidden sm:inline">{t('nav.logout')}</span>
-          </button>
-        </div>
-      </nav>
+        </nav>
+      </div>
 
       <div className="flex-grow flex flex-col items-center w-full">
         {/* Dynamic integrated license banner */}
         {isLicenseEndingSoon && !dismissLicenseBanner && (
-          <section className="w-full max-w-7xl px-6 md:px-20 pt-8 pb-1">
+          <section className="w-full max-w-7xl px-4 sm:px-6 md:px-20 pt-8 pb-1">
             <div className="relative overflow-hidden bg-gradient-to-r from-amber-500/10 via-amber-600/5 to-rose-500/5 dark:from-amber-500/15 dark:to-rose-500/10 border border-amber-550/20 dark:border-amber-500/15 rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm animate-in fade-in slide-in-from-top-4 duration-300">
               {/* Decorative vertical gradient strip */}
               <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-amber-500 to-rose-500 rounded-l-full"></div>
@@ -278,7 +280,7 @@ export const Hub: React.FC<HubProps> = ({
           </section>
         )}
         {/* Compact welcome row */}
-        <section className="w-full max-w-7xl px-6 md:px-20 pt-10 pb-6">
+        <section className="w-full max-w-7xl px-4 sm:px-6 md:px-20 pt-10 pb-6">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-gradient-to-r from-blue-500/5 to-indigo-500/5 border border-blue-500/10 p-8 rounded-[2.5rem] w-full">
             <div className="space-y-2">
               <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-black tracking-widest uppercase mb-1">
@@ -307,7 +309,7 @@ export const Hub: React.FC<HubProps> = ({
         </section>
 
         {/* Modules List View */}
-        <section id="services" className="w-full py-8 px-6 md:px-20 transition-colors">
+        <section id="services" className="w-full py-8 px-4 sm:px-6 md:px-20 transition-colors">
           <div className="max-w-7xl mx-auto">
             
             {/* --- VISUAL TIER 1: HIGHLY HIGHLIGHTED CORE OPERATIONAL MODULES --- */}
@@ -424,7 +426,7 @@ export const Hub: React.FC<HubProps> = ({
         </section>
 
         {/* Footer info in the Hub page */}
-        <footer className="w-full py-12 px-6 md:px-20 border-t border-slate-100 dark:border-slate-800/80 flex flex-col md:flex-row items-center justify-between gap-8 bg-white dark:bg-[#0B1120] mt-10">
+        <footer className="w-full py-12 px-4 sm:px-6 md:px-20 border-t border-slate-100 dark:border-slate-800/80 flex flex-col md:flex-row items-center justify-between gap-8 bg-white dark:bg-[#0B1120] mt-10">
           <div className="flex items-center gap-3 opacity-70">
             <div className="bg-slate-900 dark:bg-slate-800 p-2 rounded-xl">
               <LayoutDashboard className="w-4 h-4 text-white" />

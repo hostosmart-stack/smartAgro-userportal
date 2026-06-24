@@ -117,6 +117,54 @@
   --color-farm-950: #1e1b4b;
 }
 
+/* Global Premium Card Styling */
+.bg-white.rounded-lg,
+.bg-white.rounded-xl,
+.bg-white.rounded-2xl,
+.bg-white.rounded-3xl,
+.bg-white.rounded-\[1\.5rem\],
+.bg-white.rounded-\[2rem\],
+.bg-white.rounded-\[2\.5rem\],
+.bg-white.rounded-\[3rem\],
+.dark .bg-white.rounded-lg,
+.dark .bg-white.rounded-xl,
+.dark .bg-white.rounded-2xl,
+.dark .bg-white.rounded-3xl,
+.dark .bg-white.rounded-\[1\.5rem\],
+.dark .bg-white.rounded-\[2rem\],
+.dark .bg-white.rounded-\[2\.5rem\],
+.dark .bg-white.rounded-\[3rem\] {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* Hover-lift card style for premium interactive feel */
+.bg-white.rounded-lg:hover,
+.bg-white.rounded-xl:hover,
+.bg-white.rounded-2xl:hover,
+.bg-white.rounded-3xl:hover,
+.bg-white.rounded-\[1\.5rem\]:hover,
+.bg-white.rounded-\[2rem\]:hover,
+.bg-white.rounded-\[2\.5rem\]:hover,
+.bg-white.rounded-\[3rem\]:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px -4px rgba(15, 23, 42, 0.04), 0 4px 12px -2px rgba(15, 23, 42, 0.02) !important;
+  border-color: rgba(16, 185, 129, 0.15) !important; /* Accent border on hover */
+}
+
+/* Hover-lift in dark mode */
+.dark .bg-white.rounded-lg:hover,
+.dark .bg-white.rounded-xl:hover,
+.dark .bg-white.rounded-2xl:hover,
+.dark .bg-white.rounded-3xl:hover,
+.dark .bg-white.rounded-\[1\.5rem\]:hover,
+.dark .bg-white.rounded-\[2rem\]:hover,
+.dark .bg-white.rounded-\[2\.5rem\]:hover,
+.dark .bg-white.rounded-\[3rem\]:hover {
+  transform: translateY(-3px);
+  border-color: rgba(16, 185, 129, 0.25) !important; /* Green glowing border on hover */
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5), 0 0 15px rgba(16, 185, 129, 0.1) !important;
+}
+
 /* Dark Mode Overrides - Refined for Beauty */
 .dark body {
   background-color: #0B1120; /* Deep rich blue-black */
@@ -237,3 +285,73 @@
 .dark .premium-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: rgba(100, 116, 139, 0.8);
 }
+
+/* --- PREMIUM MOBILE OPTIMIZATIONS (FLUTTER/IOS INSPIRED) --- */
+
+/* Ensure all centered modals inside fixed overlays fit the screen height beautifully, with scroll support and 3D bounce */
+div[class*="fixed"][class*="items-center"][class*="justify-center"] {
+  padding: 12px !important;
+}
+
+div[class*="fixed"][class*="items-center"][class*="justify-center"] > div {
+  max-height: 86vh !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 1.75rem !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+  animation: modal-entrance 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+@keyframes modal-entrance {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Make form elements and buttons on mobile touch-friendly (44px target) with modern padding */
+@media (max-width: 640px) {
+  input[type="text"],
+  input[type="number"],
+  input[type="password"],
+  input[type="email"],
+  input[type="date"],
+  select,
+  textarea,
+  button:not(.p-1):not(.p-1\.5):not(.p-2):not(.w-6):not(.w-8) {
+    min-height: 44px !important;
+  }
+  
+  /* Give extra negative space around headings on mobile to breathe */
+  h1, h2 {
+    letter-spacing: -0.02em;
+  }
+  
+  /* Ensure filter wraps don't get squeezed but roll gracefully */
+  .mobile-horizontal-scroll {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 8px;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .mobile-horizontal-scroll::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Ensure grids on mobile have comfortable spacing */
+  .grid-cols-1, .grid-cols-2 {
+    gap: 16px !important;
+  }
+}
+
+/* Beautiful custom focusing states for input/select elements */
+input, select, textarea {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+

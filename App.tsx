@@ -655,7 +655,7 @@ const InnerApp = () => {
     }
 
     switch (currentView) {
-      case 'dashboard': return <Dashboard products={filteredProducts} invoices={filteredInvoices} boutiques={filteredBoutiques} transfers={filteredTransfers} expenses={filteredExpenses} onNavigate={setCurrentView} userRole={userRole} userBoutique={userBoutique} userRoleObj={userRoleObj} userName={currentEmployee?.name || 'Administrateur'} userEmail={currentEmployee?.email || ''} />;
+      case 'dashboard': return <Dashboard products={filteredProducts} invoices={filteredInvoices} boutiques={filteredBoutiques} transfers={filteredTransfers} expenses={filteredExpenses} onNavigate={setCurrentView} userRole={userRole} userBoutique={userBoutique} userRoleObj={userRoleObj} userName={currentEmployee?.name || 'Administrateur'} userEmail={currentEmployee?.email || ''} parentActiveCategory={activeCategory} />;
       case 'inventory': return <Inventory products={filteredProducts} userRole={userRole} userPermissions={userPermissions} userBoutique={userBoutique} boutiques={filteredBoutiques} onNavigate={setCurrentView} onTransferProduct={(id) => { setPreSelectedTransferProduct(id); setCurrentView('transfers'); }} currentProvenderieId={currentProvenderieId} />;
       case 'transfers': return <Transfers products={filteredProducts} transfers={filteredTransfers} boutiques={filteredBoutiques} userRole={userRole} userBoutique={userBoutique} userName={currentEmployee?.name || 'Administrateur'} preSelectedProductId={preSelectedTransferProduct} onClearPreSelection={() => setPreSelectedTransferProduct(null)} currentProvenderieId={currentProvenderieId} />;
       case 'pos': return <POS products={filteredProducts} employees={filteredEmployees} invoices={filteredInvoices} expenses={filteredExpenses} customers={filteredCustomers} onCheckout={handleCheckout} onAddExpense={handleAddExpense} onVoidLastSale={handleVoidLastSale} userBoutique={userBoutique} userRole={userRole} userPermissions={userPermissions} boutiques={filteredBoutiques} companyName={settings.companyName} userName={currentEmployee?.name || 'Administrateur'} currentProvenderieId={currentProvenderieId} provenderies={provenderies} />;
@@ -678,7 +678,7 @@ const InnerApp = () => {
         expenses={expenses}
         currentEmployee={currentEmployee}
       />;
-      default: return <Dashboard products={products} invoices={invoices} boutiques={boutiques} transfers={transfers} expenses={expenses} onNavigate={setCurrentView} />;
+      default: return <Dashboard products={products} invoices={invoices} boutiques={boutiques} transfers={transfers} expenses={expenses} onNavigate={setCurrentView} parentActiveCategory={activeCategory} />;
     }
   };
 
@@ -787,7 +787,7 @@ const InnerApp = () => {
           onLogout={handleLogout}
         />
       )}
-      <main className={`flex-1 transition-all duration-300 ${isMobile ? 'ml-0 pt-16' : (!activeCategory ? 'ml-0' : (isSidebarCollapsed ? 'ml-20' : 'ml-64'))} p-3 md:p-6 h-full overflow-hidden flex flex-col relative`}>
+      <main className={`flex-1 transition-all duration-300 ${isMobile ? 'ml-0 pt-16' : (!activeCategory ? 'ml-0' : (isSidebarCollapsed ? 'ml-20' : 'ml-64'))} px-4 pb-4 pt-3 sm:px-6 md:p-6 h-full overflow-hidden flex flex-col relative`}>
         <div className="h-full max-w-[1600px] mx-auto flex flex-col w-full">
           {isLicenseEndingSoon && !dismissLicenseBanner && activeCategory && (
             <div className="mb-4 bg-gradient-to-r from-amber-500/15 to-orange-500/10 border border-amber-500/25 dark:border-amber-500/15 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-sm relative overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">

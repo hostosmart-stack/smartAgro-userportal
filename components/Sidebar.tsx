@@ -167,13 +167,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
               title={isCollapsed ? item.label : undefined}
               className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-3.5 rounded-xl transition-all duration-300 group relative ${
                 currentView === item.id 
-                  ? 'bg-white text-slate-900 shadow-[0_8px_20px_rgba(0,0,0,0.15)] font-bold' 
+                  ? 'bg-gradient-to-r from-farm-500 to-emerald-600 text-white shadow-[0_10px_20px_rgba(16,185,129,0.3)] font-bold' 
                   : 'text-slate-400 hover:bg-white/[0.04] hover:text-white'
               }`}
             >
-              <Icon className={`w-4 h-4 shrink-0 transition-transform duration-250 ${currentView === item.id ? 'scale-110 text-farm-500' : 'group-hover:scale-105'}`} />
+              <Icon className={`w-4 h-4 shrink-0 transition-transform duration-250 ${currentView === item.id ? 'scale-110 text-white' : 'group-hover:scale-105'}`} />
               {!isCollapsed && (
-                <span className={`text-xs font-black tracking-wide leading-tight ${currentView === item.id ? 'text-slate-900' : 'text-slate-400 group-hover:text-slate-200'} break-words line-clamp-2 uppercase`}>{item.label}</span>
+                <span className={`text-xs font-black tracking-wide leading-tight ${currentView === item.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'} break-words line-clamp-2 uppercase`}>{item.label}</span>
               )}
             </button>
           );
