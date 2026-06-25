@@ -558,7 +558,7 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
   if (showReceipt) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl flex flex-col overflow-hidden max-h-[90vh] animate-in zoom-in-95 duration-300">
+        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl flex flex-col overflow-hidden max-h-[90vh] animate-in zoom-in-95 duration-300 print:hidden">
             <div className="p-6 border-b bg-gray-50 flex justify-between items-center">
                 <div>
                     <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
@@ -613,7 +613,7 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
         </div>
         
         {/* Hidden Print Content */}
-        <div className="hidden print:block printable-content">
+        <div className="hidden print:block">
             <InvoiceTemplate invoice={showReceipt} boutique={boutiques.find(b => b.id === showReceipt.boutique)} provenderie={currentProvenderie} companyName={companyName} />
         </div>
       </div>

@@ -30,21 +30,21 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({ invoice, bouti
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           @page { 
-            size: 72mm auto; /* Matches your paper width */
-            margin: 0; 
+            size: auto; 
+            margin: 5mm auto !important; 
           }
           body { 
             margin: 0; 
             padding: 0; 
+            background: white !important;
           }
           .printable-content { 
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
+            position: relative !important;
+            margin: 0 auto !important;
             width: 72mm !important; 
+            max-width: 100% !important;
             /* This padding creates the 'breathing room' from the edges */
             padding: 4mm 2mm !important; 
-            margin: 0 !important;
             box-sizing: border-box !important;
           }
         }

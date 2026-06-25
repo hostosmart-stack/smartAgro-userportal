@@ -350,7 +350,7 @@ export const Invoices: React.FC<InvoicesProps> = ({ invoices, products, onUpdate
     <div className="space-y-6 animate-in fade-in duration-500 h-full overflow-y-auto pb-20 premium-scrollbar">
       
       {/* Header & Filters */}
-      <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+      <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 print:hidden">
          <div>
             <h2 className="text-2xl font-bold text-gray-900">Factures & Commandes</h2>
             <p className="text-gray-500 text-sm">Historique des ventes et paiements.</p>
@@ -358,7 +358,7 @@ export const Invoices: React.FC<InvoicesProps> = ({ invoices, products, onUpdate
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 mb-6">
+      <div className="flex border-b border-gray-200 mb-6 print:hidden">
         <button
           onClick={() => setActiveTab('invoices')}
           className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${activeTab === 'invoices' ? 'border-farm-500 text-farm-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
@@ -375,7 +375,8 @@ export const Invoices: React.FC<InvoicesProps> = ({ invoices, products, onUpdate
 
       {activeTab === 'invoices' ? (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-3 sm:gap-4 items-center bg-white p-3 sm:p-4 rounded-2xl shadow-sm border border-gray-100">
+          <div className="print:hidden space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-3 sm:gap-4 items-center bg-white p-3 sm:p-4 rounded-2xl shadow-sm border border-gray-100">
               <div className="relative group w-full lg:w-64">
                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-farm-500 transition-colors w-4 h-4" />
                  <input 
@@ -621,9 +622,10 @@ export const Invoices: React.FC<InvoicesProps> = ({ invoices, products, onUpdate
             onPageChange={setCurrentPage} 
           />
       </div>
+      </div>
 
       {/* Printable Invoice Template */}
-      <div className="hidden print:block printable-content">
+      <div className="hidden print:block">
         {selectedInvoice && <InvoiceTemplate invoice={selectedInvoice} boutique={boutiques.find(b => b.id === selectedInvoice.boutique)} provenderie={currentProvenderie} companyName={companyName} />}
       </div>
       </>
@@ -682,7 +684,7 @@ export const Invoices: React.FC<InvoicesProps> = ({ invoices, products, onUpdate
 
       {/* Customer Details Modal */}
       {selectedCustomer && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 animate-in fade-in duration-300 print:hidden">
           <div className="bg-white rounded-[2.5rem] w-full max-w-4xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500 flex flex-col max-h-[95vh] border border-white/20">
             <div className="p-8 border-b border-gray-100 flex justify-between items-start bg-slate-50/50">
               <div className="flex items-center gap-4">
@@ -787,7 +789,7 @@ export const Invoices: React.FC<InvoicesProps> = ({ invoices, products, onUpdate
 
       {/* Invoice Detail Modal */}
       {selectedInvoice && createPortal(
-      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-2 md:p-4 animate-in fade-in duration-300">
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-2 md:p-4 animate-in fade-in duration-300 print:hidden">
           <div className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] w-full max-w-5xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500 flex flex-col max-h-[98vh] md:max-h-[95vh] border border-white/20">
               {/* Modal Header */}
               <div className="p-4 md:p-8 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-slate-50 to-white relative overflow-hidden">
@@ -1238,7 +1240,7 @@ export const Invoices: React.FC<InvoicesProps> = ({ invoices, products, onUpdate
 
       {/* Confirm Void Modal */}
       {showConfirmVoid && createPortal(
-      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in">
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in print:hidden">
           <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6 animate-in zoom-in-95">
               <div className="flex items-center gap-3 mb-4 text-red-600">
                   <AlertCircle className="w-6 h-6" />
