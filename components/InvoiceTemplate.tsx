@@ -38,10 +38,13 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({ invoice, bouti
             padding: 0; 
           }
           .printable-content { 
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
             width: 72mm !important; 
             /* This padding creates the 'breathing room' from the edges */
             padding: 4mm 2mm !important; 
-            margin: 0 auto !important;
+            margin: 0 !important;
             box-sizing: border-box !important;
           }
         }

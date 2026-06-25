@@ -24,18 +24,81 @@
 }
 
 @media print {
+  /* Hide all non-printable content */
   body * {
-    visibility: hidden;
+    visibility: hidden !important;
   }
-  .printable-content, .printable-content * {
-    visibility: visible;
+  
+  /* Show only the printable content and its elements */
+  .printable-content,
+  .printable-content * {
+    visibility: visible !important;
   }
+  
+  /* Absolute positioning relative to the paper viewport */
   .printable-content {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    margin: 0 !important;
+    padding: 10px !important;
+    background: white !important;
+    color: black !important;
+    box-sizing: border-box !important;
+    z-index: 9999999 !important;
   }
+
+  /* Reset layout constraints of all possible parent containers.
+     Setting 'position: static' ensures that absolute elements resolve relative to the body/page.
+     Setting 'display: block', 'height: auto', 'overflow: visible' prevents clipping and horizontal/vertical squishing. */
+  html, 
+  body, 
+  #root, 
+  #root > div, 
+  main, 
+  aside, 
+  header, 
+  nav,
+  div[class*="h-"], 
+  div[class*="w-"], 
+  div[class*="overflow-"], 
+  div[class*="flex-"],
+  div[class*="grid-"],
+  div[class*="ml-"],
+  div[class*="p-"],
+  div[class*="max-w-"] {
+    position: static !important;
+    display: block !important;
+    float: none !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+
+  /* Hide print-hidden classes */
+  .print\:hidden {
+    display: none !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+  }
+
   @page {
     size: auto;
     margin: 0mm;
