@@ -15,6 +15,7 @@ interface InventoryProps {
   onNavigate?: (view: string) => void;
   onTransferProduct?: (productId: string) => void;
   currentProvenderieId?: string;
+  categories?: string[];
 }
 
 interface MixIngredient {
@@ -23,7 +24,7 @@ interface MixIngredient {
   weight: number; // kg
 }
 
-export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admin', userPermissions = [], userBoutique = 'Toutes', boutiques = [], onNavigate, onTransferProduct, currentProvenderieId }) => {
+export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admin', userPermissions = [], userBoutique = 'Toutes', boutiques = [], onNavigate, onTransferProduct, currentProvenderieId, categories = [] }) => {
   const { t } = useLanguage();
   const { notify } = useNotifications();
   
@@ -98,7 +99,12 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
     
     let matchesCat = true;
     if (activeGroup !== 'all') {
-      matchesCat = categoryGroups[activeGroup as keyof typeof categoryGroups]?.categories.includes(p.category) || false;
+      const group = categoryGroups[activeGroup as keyof typeof categoryGroups];
+      if (group) {
+        matchesCat = group.categories.includes(p.category) || false;
+      } else {
+        matchesCat = p.category === activeGroup;
+      }
     }
     return matchesSearch && matchesCat;
   });
@@ -143,7 +149,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
     setViewingProductId(null);
     setEditForm({
       name: '',
-      category: Category.POULTRY,
+      category: (categories[0] as Category) || Category.POULTRY,
       price: 0,
       costPrice: 0,
       stock: 0,
@@ -1495,9 +1501,18 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
                 onChange={(e) => setActiveGroup(e.target.value)}
               >
                 <option value="all">{t('common.all_categories')}</option>
-                {Object.entries(categoryGroups).map(([key, group]) => (
-                    <option key={key} value={key}>{group.label}</option>
-                ))}
+                <optgroup label="Groupes">
+                  {Object.entries(categoryGroups).map(([key, group]) => (
+                      <option key={key} value={key}>{group.label}</option>
+                  ))}
+                </optgroup>
+                {categories.length > 0 && (
+                  <optgroup label="Catégories">
+                    {categories.map(c => (
+                        <option key={c} value={c}>{c}</option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
           </div>
@@ -1982,7 +1997,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-gray-500 uppercase">{t('inventory.category')}</label>
                                 <select className="w-full p-4 border border-gray-200 rounded-xl text-base bg-white focus:ring-2 focus:ring-farm-500 outline-none" value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value as Category})}>
-                                    {Object.values(Category).map(c => <option key={c} value={c}>{c}</option>)}
+                                    {(categories.length > 0 ? categories : Object.values(Category)).map(c => <option key={c} value={c}>{c}</option>)}
                                 </select>
                             </div>
                         </div>

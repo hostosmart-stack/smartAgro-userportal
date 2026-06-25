@@ -14,9 +14,10 @@ interface BoutiquesProps {
   transfers?: StockTransfer[];
   currentProvenderieId?: string;
   userRoleObj?: UserRole;
+  categories?: string[];
 }
 
-export const Boutiques: React.FC<BoutiquesProps> = ({ products, boutiques = [], userRole = 'Admin', userBoutique = 'Toutes', transfers = [], currentProvenderieId, userRoleObj }) => {
+export const Boutiques: React.FC<BoutiquesProps> = ({ products, boutiques = [], userRole = 'Admin', userBoutique = 'Toutes', transfers = [], currentProvenderieId, userRoleObj, categories = [] }) => {
   const { notify } = useNotifications();
   const [activeTab, setActiveTab] = useState<'overview' | 'transfers'>('overview');
   const [searchTerm, setSearchTerm] = useState('');
@@ -352,7 +353,7 @@ export const Boutiques: React.FC<BoutiquesProps> = ({ products, boutiques = [], 
                      onChange={e => setSelectedCategory(e.target.value)}
                  >
                      <option value="Tout">Toutes les catégories</option>
-                     {Object.values(Category).map(cat => (
+                     {(categories.length > 0 ? categories : Object.values(Category)).map(cat => (
                          <option key={cat} value={cat}>{cat}</option>
                      ))}
                  </select>

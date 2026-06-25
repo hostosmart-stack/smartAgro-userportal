@@ -31,8 +31,8 @@ export const Landing: React.FC<LandingProps> = ({ onLoginClick }) => {
     <div className="min-h-screen bg-[#FAF9F5] text-slate-900 font-sans selection:bg-farm-500 selection:text-white overflow-x-hidden">
       
       {/* 1. Header & Navigation */}
-      <nav className="fixed top-0 w-full bg-white/80 backdrop-blur-md z-50 border-b border-gray-100/60 transition-all">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
+      <div className="fixed top-4 left-4 right-4 z-50 max-w-7xl mx-auto shrink-0">
+        <nav className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-gray-150/20 dark:border-slate-800/80 rounded-2xl shadow-[0_10px_35px_rgba(0,0,0,0.03)] dark:shadow-[0_10px_35px_rgba(0,0,0,0.4)] py-3 px-4 sm:px-6 md:px-8 flex items-center justify-between transition-all duration-300">
           <div className="flex items-center gap-2.5">
             <div className="bg-gradient-to-tr from-farm-600 to-emerald-700 p-2 sm:p-2.5 rounded-xl sm:rounded-2xl shadow-sm">
                <Leaf className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -69,8 +69,8 @@ export const Landing: React.FC<LandingProps> = ({ onLoginClick }) => {
               {language === 'fr' ? 'Système' : 'System Access'}
             </button>
           </div>
-        </div>
-      </nav>
+        </nav>
+      </div>
 
       {/* 2. Hero Section */}
       <section className="pt-24 sm:pt-32 pb-16 sm:pb-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto relative">

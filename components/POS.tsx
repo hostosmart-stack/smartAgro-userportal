@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Product, CartItem, Invoice, Category, ProductVariant, Expense, Employee, Boutique, Customer, Provenderie } from '../types';
 import { Search, ShoppingCart, Plus, Trash2, CheckCircle, Receipt, X, Tag, TrendingDown, TrendingUp, Save, Edit, Loader2, AlertTriangle, User, DollarSign, Printer, ArrowRight, CreditCard } from 'lucide-react';
 import { useNotifications } from './ui/Notifications';
@@ -23,6 +23,7 @@ interface POSProps {
   companyName?: string;
   userName?: string;
   currentProvenderieId?: string;
+  categories?: string[];
 }
 
 const TABS = [
@@ -41,13 +42,22 @@ const EXPENSE_CATEGORIES = [
   { id: 'DIVERS', label: 'Divers' },
 ];
 
-export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], expenses = [], customers, onCheckout, onAddExpense, onVoidLastSale, userRole = 'Admin', userPermissions = [], userBoutique = 'Toutes', boutiques = [], provenderies = [], companyName, userName, currentProvenderieId }) => {
+export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], expenses = [], customers, onCheckout, onAddExpense, onVoidLastSale, userRole = 'Admin', userPermissions = [], userBoutique = 'Toutes', boutiques = [], provenderies = [], companyName, userName, currentProvenderieId, categories = [] }) => {
   const { notify } = useNotifications();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [activeTab, setActiveTab] = useState<string>('Tout');
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  const dynamicTabs = useMemo(() => {
+    if (!categories || categories.length === 0) return TABS;
+    const tabs = [{ id: 'Tout', label: 'Tout', categories: [] }];
+    categories.forEach(cat => {
+      tabs.push({ id: cat, label: cat, categories: [cat as any] });
+    });
+    return tabs;
+  }, [categories]);
   
   const currentProvenderie = provenderies.find(p => p.id === currentProvenderieId);
   
@@ -531,7 +541,7 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
   const filteredProducts = products.filter(product => {
     const matchesSearch = (product.name || '').toLowerCase().includes((searchTerm || '').toLowerCase());
     const matchesTab = activeTab === 'Tout' || 
-      TABS.find(t => t.id === activeTab)?.categories.includes(product.category);
+      dynamicTabs.find(t => t.id === activeTab)?.categories.includes(product.category);
       
     // Check if product has stock > 0 in the selected boutique
     const hasVariants = product.variants && product.variants.length > 0;
@@ -677,7 +687,7 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
             </button>
           </div>
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-            {TABS.map(tab => (
+            {dynamicTabs.map(tab => (
               <button 
                 key={tab.id} 
                 onClick={() => setActiveTab(tab.id)} 

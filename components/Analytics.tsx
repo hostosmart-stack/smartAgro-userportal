@@ -9,11 +9,12 @@ interface AnalyticsProps {
   boutiques?: Boutique[];
   userRole?: string;
   userBoutique?: string;
+  categories?: string[];
 }
 
 type TimeRange = 'today' | 'week' | 'month' | 'year' | 'all';
 
-export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiques = [], userRole = 'Admin', userBoutique = 'Toutes' }) => {
+export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiques = [], userRole = 'Admin', userBoutique = 'Toutes', categories = [] }) => {
   const [activeCategory, setActiveCategory] = useState<string>('Tous');
   const [timeRange, setTimeRange] = useState<TimeRange>('all');
   const [boutiqueFilter, setBoutiqueFilter] = useState<string>(() => {
@@ -320,9 +321,9 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
     <div className="space-y-8 animate-in fade-in duration-500 overflow-y-auto h-full pb-20 scrollbar-hide">
       
       {/* --- HEADER --- */}
-      <div className="flex flex-col md:flex-row justify-between md:items-end gap-6 border-b border-gray-100 pb-6 bg-white/50 backdrop-blur-sm sticky top-0 z-20 -mx-6 px-6 pt-4">
-        <div>
-           <h2 className="text-3xl font-display font-bold text-gray-900 tracking-tight flex items-center gap-3">
+      <div className="flex flex-col md:flex-row justify-between md:items-end gap-6 border-b border-gray-100 pb-6 bg-white/50 backdrop-blur-sm sticky top-0 z-20 -mx-6 px-6 pt-4 items-center text-center md:items-start md:text-left">
+        <div className="flex flex-col items-center md:items-start">
+           <h2 className="text-3xl font-display font-bold text-gray-900 tracking-tight flex items-center justify-center md:justify-start gap-3">
                <div className="p-2 bg-blue-50 rounded-xl">
                    <BarChart3 className="w-8 h-8 text-blue-600" />
                </div>
@@ -330,7 +331,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
            </h2>
            <p className="text-gray-500 text-sm mt-2 font-medium ml-1">Performances et valorisation de votre activité.</p>
         </div>
-           <div className="flex flex-wrap gap-3">
+           <div className="flex flex-wrap gap-3 justify-center md:justify-end">
              {canFilterBoutique && (
                  <div className="relative group">
                      <Store className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 group-hover:text-farm-600 transition-colors" />
@@ -360,7 +361,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
                     onChange={(e) => setActiveCategory(e.target.value)}
                 >
                     <option value="Tous">Tous les rayons</option>
-                    {Object.values(Category).map(c => <option key={c} value={c}>{c}</option>)}
+                    {(categories.length > 0 ? categories : Object.values(Category)).map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
                 <ArrowDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-3 h-3 pointer-events-none" />
             </div>

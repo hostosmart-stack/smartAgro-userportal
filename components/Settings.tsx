@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Palette, Building, Save, CheckCircle2, Moon, Sun, Monitor, Database, Server, Eye, KeyRound, Clock, ShieldCheck, ShieldAlert, AlertTriangle } from 'lucide-react';
+import { Settings as SettingsIcon, Palette, Building, Save, CheckCircle2, Moon, Sun, Monitor, Database, Server, Eye, KeyRound, Clock, ShieldCheck, ShieldAlert, AlertTriangle, Plus, Trash2, Edit2, X, Check, RotateCcw, Tag } from 'lucide-react';
 import { useNotifications } from './ui/Notifications';
 import { useLanguage } from '../contexts/LanguageContext';
 import { subscribeToRequestStats } from '../services/db';
@@ -16,6 +16,7 @@ export interface AppSettings {
   colorTheme: 'farm' | 'ocean' | 'sunset' | 'berry' | 'royal';
   companyName: string;
   language: 'fr' | 'en';
+  customCategories?: string[];
 }
 
 export const Settings: React.FC<SettingsProps> = ({ onSettingsChange, currentSettings, currentProvenderie }) => {
@@ -29,13 +30,85 @@ export const Settings: React.FC<SettingsProps> = ({ onSettingsChange, currentSet
     return () => unsub();
   }, []);
 
+  const DEFAULT_CATEGORIES = [
+    'Matières Premières',
+    'Volailles & Aliments Complets',
+    'Bétail (Porcs/Bovins)',
+    'Matériel & Abreuvoirs',
+    'Santé Animale',
+    'Divers'
+  ];
+
+  const [categoriesList, setCategoriesList] = useState<string[]>(() => {
+    return currentSettings.customCategories || DEFAULT_CATEGORIES;
+  });
+
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingValue, setEditingValue] = useState('');
+
   useEffect(() => {
     setSettings(currentSettings);
+    if (currentSettings.customCategories) {
+      setCategoriesList(currentSettings.customCategories);
+    }
   }, [currentSettings]);
 
+  const handleAddCategory = () => {
+    const trimmed = newCategoryName.trim();
+    if (!trimmed) {
+      notify(settings.language === 'en' ? 'Category name cannot be empty' : 'Le nom de la catégorie ne peut pas être vide', 'error');
+      return;
+    }
+    if (categoriesList.includes(trimmed)) {
+      notify(settings.language === 'en' ? 'Category already exists' : 'Cette catégorie existe déjà', 'error');
+      return;
+    }
+    setCategoriesList([...categoriesList, trimmed]);
+    setNewCategoryName('');
+    notify(settings.language === 'en' ? 'Category added (click Save to apply)' : 'Catégorie ajoutée (cliquez sur Enregistrer pour appliquer)', 'success');
+  };
+
+  const handleDeleteCategory = (index: number) => {
+    const catName = categoriesList[index];
+    const updated = categoriesList.filter((_, i) => i !== index);
+    setCategoriesList(updated);
+    notify(settings.language === 'en' ? `Category "${catName}" removed (click Save to apply)` : `Catégorie "${catName}" supprimée (cliquez sur Enregistrer pour appliquer)`, 'success');
+  };
+
+  const handleStartEdit = (index: number) => {
+    setEditingIndex(index);
+    setEditingValue(categoriesList[index]);
+  };
+
+  const handleSaveEdit = (index: number) => {
+    const trimmed = editingValue.trim();
+    if (!trimmed) {
+      notify(settings.language === 'en' ? 'Category name cannot be empty' : 'Le nom de la catégorie ne peut pas être vide', 'error');
+      return;
+    }
+    if (categoriesList.includes(trimmed) && categoriesList[index] !== trimmed) {
+      notify(settings.language === 'en' ? 'Category already exists' : 'Cette catégorie existe déjà', 'error');
+      return;
+    }
+    const updated = [...categoriesList];
+    updated[index] = trimmed;
+    setCategoriesList(updated);
+    setEditingIndex(null);
+    notify(settings.language === 'en' ? 'Category modified (click Save to apply)' : 'Catégorie modifiée (cliquez sur Enregistrer pour appliquer)', 'success');
+  };
+
+  const handleResetCategories = () => {
+    if (confirm(settings.language === 'en' ? 'Are you sure you want to reset all categories to defaults?' : 'Êtes-vous sûr de vouloir réinitialiser toutes les catégories par défaut ?')) {
+      setCategoriesList(DEFAULT_CATEGORIES);
+      notify(settings.language === 'en' ? 'Categories reset to defaults' : 'Catégories réinitialisées', 'success');
+    }
+  };
+
   const handleSave = () => {
-    onSettingsChange(settings);
-    localStorage.setItem('smartAgro_settings', JSON.stringify(settings));
+    const updatedSettings = { ...settings, customCategories: categoriesList };
+    onSettingsChange(updatedSettings);
+    localStorage.setItem('smartAgro_settings', JSON.stringify(updatedSettings));
     window.dispatchEvent(new Event('settingsChanged'));
     notify(t('settings.saved'), "success");
   };
@@ -176,6 +249,139 @@ export const Settings: React.FC<SettingsProps> = ({ onSettingsChange, currentSet
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Product Categories Settings */}
+        <div className="md:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700 font-sans">
+          <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-4 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-farm-50 dark:bg-farm-900/20 rounded-lg text-farm-600 dark:text-farm-400">
+                <Tag className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 dark:text-white">
+                  {settings.language === 'en' ? 'Product Categories' : 'Catégories de Produits'}
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {settings.language === 'en' ? 'Manage product lines and inventory sections' : 'Gérer les rayons de produits et sections de stock'}
+                </p>
+              </div>
+            </div>
+            
+            <button
+              onClick={handleResetCategories}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 text-xs font-bold text-gray-600 dark:text-gray-300 rounded-lg transition-all"
+              title={settings.language === 'en' ? 'Reset to Default Categories' : 'Rétablir les catégories par défaut'}
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{settings.language === 'en' ? 'Reset' : 'Réinitialiser'}</span>
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {/* Category Add Bar */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder={settings.language === 'en' ? 'Add new category (e.g. Fertilizer)...' : 'Ajouter une nouvelle catégorie (ex: Engrais)...'}
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddCategory();
+                  }
+                }}
+                className="flex-1 p-3 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-farm-500 outline-none transition-all text-sm dark:bg-gray-900 dark:text-white"
+              />
+              <button
+                onClick={handleAddCategory}
+                className="bg-farm-600 hover:bg-farm-700 text-white px-4 py-3 rounded-xl flex items-center justify-center gap-1.5 transition-all text-sm font-bold shadow-sm"
+              >
+                <Plus className="w-4 h-4" />
+                <span>{settings.language === 'en' ? 'Add' : 'Ajouter'}</span>
+              </button>
+            </div>
+
+            {/* Categories List */}
+            <div className="border border-gray-100 dark:border-gray-700 rounded-xl overflow-hidden divide-y divide-gray-100 dark:divide-gray-700">
+              {categoriesList.map((cat, index) => {
+                const isEditing = editingIndex === index;
+                const isDefault = DEFAULT_CATEGORIES.includes(cat);
+                
+                return (
+                  <div key={index} className="flex items-center justify-between p-3.5 bg-gray-50/50 dark:bg-gray-900/10 hover:bg-gray-50 dark:hover:bg-gray-900/20 transition-all">
+                    {isEditing ? (
+                      <div className="flex-1 flex gap-2 items-center">
+                        <input
+                          type="text"
+                          value={editingValue}
+                          onChange={(e) => setEditingValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleSaveEdit(index);
+                            } else if (e.key === 'Escape') {
+                              setEditingIndex(null);
+                            }
+                          }}
+                          className="flex-1 p-2 border border-farm-400 rounded-lg text-sm focus:ring-2 focus:ring-farm-500 outline-none bg-white dark:bg-gray-900 dark:text-white font-semibold"
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => handleSaveEdit(index)}
+                          className="p-2 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400 rounded-lg hover:bg-emerald-100 transition-all"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setEditingIndex(null)}
+                          className="p-2 bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 rounded-lg hover:bg-gray-250 transition-all"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2.5">
+                          <span className="font-bold text-gray-800 dark:text-gray-200 text-sm">
+                            {cat}
+                          </span>
+                          {isDefault && (
+                            <span className="text-[10px] font-semibold bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full">
+                              {settings.language === 'en' ? 'Core' : 'Standard'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={() => handleStartEdit(index)}
+                            className="p-2 text-gray-500 hover:text-farm-600 dark:text-gray-400 dark:hover:text-farm-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
+                            title={settings.language === 'en' ? 'Rename' : 'Modifier le nom'}
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteCategory(index)}
+                            className="p-2 text-gray-400 hover:text-red-600 dark:text-gray-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg transition-all"
+                            title={settings.language === 'en' ? 'Delete' : 'Supprimer'}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            
+            <p className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">
+              {settings.language === 'en' 
+                ? '* Note: Deleting a category does not delete products belonging to it. Make sure to click "Save Settings" below to apply all changes globally.' 
+                : '* Note : Supprimer une catégorie ne supprime pas les produits associés. Veillez à bien cliquer sur "Enregistrer les paramètres" au bas de la page pour appliquer définitivement les changements.'}
+            </p>
           </div>
         </div>
 

@@ -19,6 +19,7 @@ interface DashboardProps {
   userName?: string;
   userEmail?: string;
   parentActiveCategory?: string | null;
+  categories?: string[];
 }
 
 type TimeRange = 'today' | 'week' | 'month' | 'year' | 'all';
@@ -35,7 +36,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   userRoleObj,
   userName,
   userEmail,
-  parentActiveCategory
+  parentActiveCategory,
+  categories = []
 }) => {
   const { t } = useLanguage();
   const { notify } = useNotifications();
@@ -214,7 +216,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const data: Record<string, any> = {};
     
     // Initialize categories
-    Object.values(Category).forEach(cat => {
+    (categories.length > 0 ? categories : Object.values(Category)).forEach(cat => {
         const simpleCat = cat.split(' ')[0];
         data[simpleCat] = { name: simpleCat };
         filteredBoutiques.forEach(b => {
@@ -362,7 +364,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                      onChange={(e) => setActiveCategory(e.target.value)}
                  >
                      <option value="Tous">{t('common.all_categories')}</option>
-                     {Object.values(Category).map(c => <option key={c} value={c}>{c}</option>)}
+                     {(categories.length > 0 ? categories : Object.values(Category)).map(c => <option key={c} value={c}>{c}</option>)}
                  </select>
              </div>
 

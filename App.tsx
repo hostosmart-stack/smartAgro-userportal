@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { onAuthStateChanged, User, signOut } from './services/firebase';
 import { auth } from './services/firebase';
 import { Sidebar } from './components/Sidebar';
@@ -103,6 +103,17 @@ const InnerApp = () => {
   const [preSelectedTransferProduct, setPreSelectedTransferProduct] = useState<string | null>(null);
   const [dismissLicenseBanner, setDismissLicenseBanner] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  const categories = useMemo(() => {
+    return settings.customCategories || [
+      'Matières Premières',
+      'Volailles & Aliments Complets',
+      'Bétail (Porcs/Bovins)',
+      'Matériel & Abreuvoirs',
+      'Santé Animale',
+      'Divers'
+    ];
+  }, [settings.customCategories]);
   
   const { notify } = useNotifications();
 
@@ -655,15 +666,15 @@ const InnerApp = () => {
     }
 
     switch (currentView) {
-      case 'dashboard': return <Dashboard products={filteredProducts} invoices={filteredInvoices} boutiques={filteredBoutiques} transfers={filteredTransfers} expenses={filteredExpenses} onNavigate={setCurrentView} userRole={userRole} userBoutique={userBoutique} userRoleObj={userRoleObj} userName={currentEmployee?.name || 'Administrateur'} userEmail={currentEmployee?.email || ''} parentActiveCategory={activeCategory} />;
-      case 'inventory': return <Inventory products={filteredProducts} userRole={userRole} userPermissions={userPermissions} userBoutique={userBoutique} boutiques={filteredBoutiques} onNavigate={setCurrentView} onTransferProduct={(id) => { setPreSelectedTransferProduct(id); setCurrentView('transfers'); }} currentProvenderieId={currentProvenderieId} />;
+      case 'dashboard': return <Dashboard products={filteredProducts} invoices={filteredInvoices} boutiques={filteredBoutiques} transfers={filteredTransfers} expenses={filteredExpenses} onNavigate={setCurrentView} userRole={userRole} userBoutique={userBoutique} userRoleObj={userRoleObj} userName={currentEmployee?.name || 'Administrateur'} userEmail={currentEmployee?.email || ''} parentActiveCategory={activeCategory} categories={categories} />;
+      case 'inventory': return <Inventory products={filteredProducts} userRole={userRole} userPermissions={userPermissions} userBoutique={userBoutique} boutiques={filteredBoutiques} onNavigate={setCurrentView} onTransferProduct={(id) => { setPreSelectedTransferProduct(id); setCurrentView('transfers'); }} currentProvenderieId={currentProvenderieId} categories={categories} />;
       case 'transfers': return <Transfers products={filteredProducts} transfers={filteredTransfers} boutiques={filteredBoutiques} userRole={userRole} userBoutique={userBoutique} userName={currentEmployee?.name || 'Administrateur'} preSelectedProductId={preSelectedTransferProduct} onClearPreSelection={() => setPreSelectedTransferProduct(null)} currentProvenderieId={currentProvenderieId} />;
-      case 'pos': return <POS products={filteredProducts} employees={filteredEmployees} invoices={filteredInvoices} expenses={filteredExpenses} customers={filteredCustomers} onCheckout={handleCheckout} onAddExpense={handleAddExpense} onVoidLastSale={handleVoidLastSale} userBoutique={userBoutique} userRole={userRole} userPermissions={userPermissions} boutiques={filteredBoutiques} companyName={settings.companyName} userName={currentEmployee?.name || 'Administrateur'} currentProvenderieId={currentProvenderieId} provenderies={provenderies} />;
-      case 'analytics': return <Analytics products={filteredProducts} invoices={filteredInvoices} boutiques={filteredBoutiques} userRole={userRole} userBoutique={userBoutique} />;
+      case 'pos': return <POS products={filteredProducts} employees={filteredEmployees} invoices={filteredInvoices} expenses={filteredExpenses} customers={filteredCustomers} onCheckout={handleCheckout} onAddExpense={handleAddExpense} onVoidLastSale={handleVoidLastSale} userBoutique={userBoutique} userRole={userRole} userPermissions={userPermissions} boutiques={filteredBoutiques} companyName={settings.companyName} userName={currentEmployee?.name || 'Administrateur'} currentProvenderieId={currentProvenderieId} provenderies={provenderies} categories={categories} />;
+      case 'analytics': return <Analytics products={filteredProducts} invoices={filteredInvoices} boutiques={filteredBoutiques} userRole={userRole} userBoutique={userBoutique} categories={categories} />;
       case 'accounting': return <Accounting invoices={filteredInvoices} products={filteredProducts} expenses={filteredExpenses} transfers={filteredTransfers} setExpenses={setExpenses} onUpdateInvoice={handleUpdateInvoice} boutiques={filteredBoutiques} userRole={userRole} userBoutique={userBoutique} customers={filteredCustomers} currentProvenderieId={currentProvenderieId} />;
       case 'invoices': return <Invoices invoices={filteredInvoices} products={filteredProducts} setProducts={setProducts} onUpdateInvoice={handleUpdateInvoice} boutiques={filteredBoutiques} companyName={settings.companyName} userRole={userRole} userPermissions={userPermissions} userBoutique={userBoutique} customers={filteredCustomers} currentProvenderieId={currentProvenderieId} provenderies={provenderies} />;
       case 'employees': return <Employees employees={filteredEmployees} roles={filteredRoles} boutiques={filteredBoutiques} expenses={filteredExpenses} userRole={userRole} userBoutique={userBoutique} currentProvenderieId={currentProvenderieId} />;
-      case 'boutiques': return <Boutiques products={filteredProducts} boutiques={filteredBoutiques} userRole={userRole} userBoutique={userBoutique} transfers={filteredTransfers} currentProvenderieId={currentProvenderieId} userRoleObj={userRoleObj} />;
+      case 'boutiques': return <Boutiques products={filteredProducts} boutiques={filteredBoutiques} userRole={userRole} userBoutique={userBoutique} transfers={filteredTransfers} currentProvenderieId={currentProvenderieId} userRoleObj={userRoleObj} categories={categories} />;
       case 'advisor': return <Assistant products={filteredProducts} invoices={filteredInvoices} boutiques={filteredBoutiques} employees={filteredEmployees} expenses={filteredExpenses} userRole={userRole} userBoutique={userBoutique} />;
       case 'settings': return <Settings currentSettings={settings} onSettingsChange={setSettings} currentProvenderie={currentProvenderie} />;
       case 'guide': return <Guide userRole={userRole} />;
@@ -678,7 +689,7 @@ const InnerApp = () => {
         expenses={expenses}
         currentEmployee={currentEmployee}
       />;
-      default: return <Dashboard products={products} invoices={invoices} boutiques={boutiques} transfers={transfers} expenses={expenses} onNavigate={setCurrentView} parentActiveCategory={activeCategory} />;
+      default: return <Dashboard products={products} invoices={invoices} boutiques={boutiques} transfers={transfers} expenses={expenses} onNavigate={setCurrentView} parentActiveCategory={activeCategory} categories={categories} />;
     }
   };
 
@@ -723,38 +734,40 @@ const InnerApp = () => {
       
       {/* Mobile Header */}
       {isMobile && activeCategory && (
-        <header className="fixed top-0 left-0 right-0 h-16 bg-slate-900 text-white flex items-center justify-between px-4 z-[60] shadow-lg border-b border-white/5">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setMobileSidebarOpen(true)}
-              className="p-2 hover:bg-white/10 rounded-xl transition-colors"
-            >
-              <Menu className="w-6 h-6" />
-            </button>
-            <div className="flex items-center gap-2">
-               <div className="bg-farm-500 p-1.5 rounded-lg">
-                  <Leaf className="w-4 h-4 text-white" />
-               </div>
-               <h1 className="font-display font-bold text-lg tracking-tight truncate max-w-[150px]">{settings.companyName}</h1>
+        <div className="fixed top-4 left-4 right-4 z-[60] shrink-0">
+          <header className="h-16 bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl text-white flex items-center justify-between px-4 rounded-2xl shadow-[0_10px_35px_rgba(0,0,0,0.3)] border border-white/10">
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setMobileSidebarOpen(true)}
+                className="p-2 hover:bg-white/10 rounded-xl transition-colors"
+              >
+                <Menu className="w-6 h-6" />
+              </button>
+              <div className="flex items-center gap-2">
+                 <div className="bg-farm-500 p-1.5 rounded-lg">
+                    <Leaf className="w-4 h-4 text-white" />
+                 </div>
+                 <h1 className="font-display font-bold text-lg tracking-tight truncate max-w-[150px]">{settings.companyName}</h1>
+              </div>
             </div>
-          </div>
-          
-          <div className="flex items-center gap-3">
-             {/* Simple mobile language switcher trigger pill */}
-             <button 
-               onClick={() => setLanguage(language === 'fr' ? 'en' : 'fr')}
-               className="px-2.5 py-1.5 rounded-xl bg-white/10 text-[10px] font-black uppercase tracking-widest text-[#F9FAFB] border border-white/15 hover:bg-white/20 active:scale-95 transition-all flex items-center gap-1 shrink-0"
-             >
-               {language === 'fr' ? '🇬🇧 EN' : '🇫🇷 FR'}
-             </button>
-             <div 
-               onClick={() => setCurrentView('profile')}
-               className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-xs font-bold shadow-md border border-white/20 uppercase cursor-pointer"
-             >
-               {(currentEmployee?.name || 'A').charAt(0)}
-             </div>
-          </div>
-        </header>
+            
+            <div className="flex items-center gap-3">
+               {/* Simple mobile language switcher trigger pill */}
+               <button 
+                 onClick={() => setLanguage(language === 'fr' ? 'en' : 'fr')}
+                 className="px-2.5 py-1.5 rounded-xl bg-white/10 text-[10px] font-black uppercase tracking-widest text-[#F9FAFB] border border-white/15 hover:bg-white/20 active:scale-95 transition-all flex items-center gap-1 shrink-0"
+               >
+                 {language === 'fr' ? '🇬🇧 EN' : '🇫🇷 FR'}
+               </button>
+               <div 
+                 onClick={() => setCurrentView('profile')}
+                 className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-xs font-bold shadow-md border border-white/20 uppercase cursor-pointer"
+               >
+                 {(currentEmployee?.name || 'A').charAt(0)}
+               </div>
+            </div>
+          </header>
+        </div>
       )}
 
       {activeCategory && (
@@ -787,7 +800,11 @@ const InnerApp = () => {
           onLogout={handleLogout}
         />
       )}
-      <main className={`flex-1 transition-all duration-300 ${isMobile ? 'ml-0 pt-16' : (!activeCategory ? 'ml-0' : (isSidebarCollapsed ? 'ml-20' : 'ml-64'))} px-4 pb-4 pt-3 sm:px-6 md:p-6 h-full overflow-hidden flex flex-col relative`}>
+      <main className={`flex-1 transition-all duration-300 h-full overflow-hidden flex flex-col relative ${
+        isMobile 
+          ? `ml-0 px-4 pb-4 ${activeCategory ? 'pt-24' : 'pt-4'}` 
+          : `${!activeCategory ? 'ml-0' : (isSidebarCollapsed ? 'ml-20' : 'ml-64')} p-6`
+      }`}>
         <div className="h-full max-w-[1600px] mx-auto flex flex-col w-full">
           {isLicenseEndingSoon && !dismissLicenseBanner && activeCategory && (
             <div className="mb-4 bg-gradient-to-r from-amber-500/15 to-orange-500/10 border border-amber-500/25 dark:border-amber-500/15 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-sm relative overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
