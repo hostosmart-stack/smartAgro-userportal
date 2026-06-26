@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#16a34a" />
+      <stop offset="100%" stop-color="#15803d" />
+    </linearGradient>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#FAF9F5" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)" stroke="#e2e8f0" stroke-width="8"/>
+  <circle cx="256" cy="256" r="170" fill="#f0fdf4" />
+  <path d="M256 120 C320 120 368 170 368 256 C368 342 256 392 256 392 C256 392 144 342 144 256 C144 170 192 120 256 120 Z" fill="url(#leafGrad)" />
+  <path d="M256 120 V392" stroke="#ffffff" stroke-width="6" stroke-linecap="round" opacity="0.3" />
+  <path d="M256 200 C280 220 310 220 330 210" stroke="#ffffff" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.4" />
+  <path d="M256 260 C280 280 310 280 330 270" stroke="#ffffff" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.4" />
+  <path d="M256 230 C232 250 202 250 182 240" stroke="#ffffff" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.4" />
+  <path d="M256 290 C232 310 202 310 182 300" stroke="#ffffff" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.4" />
+</svg>

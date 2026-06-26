@@ -14,13 +14,42 @@ export default defineConfig(({ mode }) => {
         react(),
         VitePWA({
           registerType: 'autoUpdate',
-          includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+          includeAssets: ['pwa-192.svg', 'pwa-512.svg'],
           manifest: {
             name: 'Smart Agro Admin',
             short_name: 'SmartAgro',
             description: 'Smart Agro Administration POS',
-            theme_color: '#ffffff',
-            icons: []
+            theme_color: '#16a34a',
+            background_color: '#FAF9F5',
+            display: 'standalone',
+            start_url: '/',
+            scope: '/',
+            icons: [
+              {
+                src: '/pwa-192.svg',
+                sizes: '192x192',
+                type: 'image/svg+xml',
+                purpose: 'any'
+              },
+              {
+                src: '/pwa-192.svg',
+                sizes: '192x192',
+                type: 'image/svg+xml',
+                purpose: 'maskable'
+              },
+              {
+                src: '/pwa-512.svg',
+                sizes: '512x512',
+                type: 'image/svg+xml',
+                purpose: 'any'
+              },
+              {
+                src: '/pwa-512.svg',
+                sizes: '512x512',
+                type: 'image/svg+xml',
+                purpose: 'maskable'
+              }
+            ]
           },
           workbox: {
             maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,

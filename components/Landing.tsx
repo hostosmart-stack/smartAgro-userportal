@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Leaf, 
   CheckCircle2, 
@@ -25,7 +25,68 @@ interface LandingProps {
 
 export const Landing: React.FC<LandingProps> = ({ onLoginClick }) => {
   const [activePolicy, setActivePolicy] = useState<'privacy' | 'terms' | 'security' | null>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [showInstallModal, setShowInstallModal] = useState(false);
+  
   const { t, language, setLanguage } = useLanguage();
+
+  useEffect(() => {
+    // Check if device is iOS
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
+    setIsIOS(isIosDevice);
+
+    // Capture the beforeinstallprompt event
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Check if already in standalone mode
+    if (
+      window.matchMedia('(display-mode: standalone)').matches || 
+      (window.navigator as any).standalone === true
+    ) {
+      setIsInstalled(true);
+    }
+
+    // Monitor install completion
+    const handleAppInstalled = () => {
+      setIsInstalled(true);
+      setDeferredPrompt(null);
+      console.log('PWA installed successfully');
+    };
+
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      try {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`User installation decision: ${outcome}`);
+        if (outcome === 'accepted') {
+          setIsInstalled(true);
+        }
+        setDeferredPrompt(null);
+      } catch (err) {
+        console.error('Error in installation flow:', err);
+        setShowInstallModal(true);
+      }
+    } else {
+      setShowInstallModal(true);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#FAF9F5] text-slate-900 font-sans selection:bg-farm-500 selection:text-white overflow-x-hidden">
@@ -46,6 +107,16 @@ export const Landing: React.FC<LandingProps> = ({ onLoginClick }) => {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
+            {!isInstalled && (
+              <button
+                onClick={handleInstallClick}
+                className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-100 rounded-xl font-bold text-[10px] sm:text-xs uppercase tracking-wide transition-all shadow-sm cursor-pointer"
+              >
+                <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="hidden sm:inline">{language === 'fr' ? 'Installer' : 'Install'}</span>
+              </button>
+            )}
+
             {/* Minimalist Language Switcher */}
             <div className="flex items-center bg-gray-100 p-0.5 rounded-lg text-[9px] sm:text-[10px]">
               <button 
@@ -108,7 +179,17 @@ export const Landing: React.FC<LandingProps> = ({ onLoginClick }) => {
                      <ChevronRight className="w-4 h-4" />
                   </button>
 
-                  <div className="flex items-center justify-center sm:justify-start gap-2 text-slate-500 font-bold text-[10px] sm:text-xs bg-white/60 p-2.5 sm:p-3 rounded-xl border border-gray-150">
+                  {!isInstalled && (
+                      <button 
+                         onClick={handleInstallClick}
+                         className="px-5 py-3 sm:px-6 sm:py-3.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 rounded-xl font-bold text-xs sm:text-sm uppercase tracking-wider transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer shrink-0"
+                      >
+                         <Smartphone className="w-4 h-4 text-emerald-600" />
+                         <span>{language === 'fr' ? "Installer l'application" : "Install Application"}</span>
+                      </button>
+                   )}
+
+                   <div className="flex items-center justify-center sm:justify-start gap-2 text-slate-500 font-bold text-[10px] sm:text-xs bg-white/60 p-2.5 sm:p-3 rounded-xl border border-gray-150">
                      <Globe className="w-4 h-4 text-emerald-600" />
                      <span>{language === 'fr' ? 'Fonctionne en ligne & hors-ligne' : 'Works online & offline'}</span>
                   </div>
@@ -438,6 +519,120 @@ export const Landing: React.FC<LandingProps> = ({ onLoginClick }) => {
                     </button>
                 </div>
             </div>
+        </div>
+      )}
+
+      {/* 4. PWA Installation Helper Modal */}
+      {showInstallModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
+          <div className="bg-white text-slate-800 rounded-3xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden border border-white/20">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shadow-inner shrink-0">
+                  <Smartphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-gray-950 tracking-tight">
+                    {language === 'fr' ? "Installer l'application" : "Install Application"}
+                  </h3>
+                  <p className="text-[9px] uppercase font-bold text-emerald-600 mt-0.5 tracking-widest">Smart Agro PWA</p>
+                </div>
+              </div>
+              <button onClick={() => setShowInstallModal(false)} className="p-1.5 hover:bg-gray-150 rounded-full transition-colors cursor-pointer">
+                <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed">
+                {language === 'fr'
+                  ? "Installez Smart Agro sur votre écran d'accueil pour y accéder en un clic et l'utiliser hors-ligne, comme une application mobile native !"
+                  : "Install Smart Agro on your home screen for instant one-click access and full offline capabilities, just like a native mobile app!"}
+              </p>
+
+              <div className="space-y-3 pt-2">
+                {isIOS ? (
+                  // iOS Instructions
+                  <div className="space-y-3">
+                    <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-100/60 flex gap-3 text-xs text-amber-800 font-semibold leading-normal">
+                      <span className="text-base leading-none">💡</span>
+                      <span>
+                        {language === 'fr' 
+                          ? "Safari sur iOS exige une installation manuelle. Suivez ces étapes simples :"
+                          : "Safari on iOS requires manual installation. Follow these simple steps:"}
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-2.5">
+                      <div className="flex items-start gap-3 text-xs sm:text-sm text-slate-700">
+                        <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-600 mt-0.5 shrink-0">1</div>
+                        <p className="leading-tight">
+                          {language === 'fr' 
+                            ? "Appuyez sur le bouton de partage de votre navigateur Safari (l'icône carrée avec une flèche vers le haut en bas de votre écran)."
+                            : "Tap the Share button in Safari (the square icon with an upward arrow at the bottom of the screen)."}
+                        </p>
+                      </div>
+                      <div className="flex items-start gap-3 text-xs sm:text-sm text-slate-700">
+                        <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-600 mt-0.5 shrink-0">2</div>
+                        <p className="leading-tight">
+                          {language === 'fr'
+                            ? "Faites défiler le menu et appuyez sur « Sur l'écran d'accueil »."
+                            : "Scroll down and tap 'Add to Home Screen'."}
+                        </p>
+                      </div>
+                      <div className="flex items-start gap-3 text-xs sm:text-sm text-slate-700">
+                        <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-600 mt-0.5 shrink-0">3</div>
+                        <p className="leading-tight">
+                          {language === 'fr'
+                            ? "Appuyez sur « Ajouter » en haut à droite pour valider l'installation."
+                            : "Tap 'Add' in the top right corner to confirm."}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  // Android / Desktop / Standard instructions
+                  <div className="space-y-3">
+                    <div className="space-y-2.5">
+                      <div className="flex items-start gap-3 text-xs sm:text-sm text-slate-700">
+                        <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-600 mt-0.5 shrink-0">1</div>
+                        <p className="leading-tight">
+                          {language === 'fr'
+                            ? "Cliquez sur le bouton de menu du navigateur (souvent trois petits points verticaux ou une flèche d'installation dans la barre d'adresse)."
+                            : "Click or tap your browser's menu button (usually three vertical dots, or an install arrow in your URL bar)."}
+                        </p>
+                      </div>
+                      <div className="flex items-start gap-3 text-xs sm:text-sm text-slate-700">
+                        <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-600 mt-0.5 shrink-0">2</div>
+                        <p className="leading-tight">
+                          {language === 'fr'
+                            ? "Sélectionnez « Installer l'application » ou « Ajouter à l'écran d'accueil »."
+                            : "Select 'Install app' or 'Add to Home screen'."}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100 text-xs text-emerald-800 font-semibold flex items-center justify-center gap-2 leading-tight">
+                      <span>✨</span>
+                      <span>
+                        {language === 'fr'
+                          ? "L'application apparaîtra ensuite sur votre écran principal."
+                          : "The app will then appear on your main home screen."}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-gray-100 flex justify-end">
+              <button 
+                onClick={() => setShowInstallModal(false)}
+                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs uppercase tracking-wider cursor-pointer"
+              >
+                {language === 'fr' ? "Fermer" : "Close"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

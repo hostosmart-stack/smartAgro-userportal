@@ -735,36 +735,50 @@ const InnerApp = () => {
       {/* Mobile Header */}
       {isMobile && activeCategory && (
         <div className="fixed top-4 left-4 right-4 z-[60] shrink-0">
-          <header className="h-16 bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl text-white flex items-center justify-between px-4 rounded-2xl shadow-[0_10px_35px_rgba(0,0,0,0.3)] border border-white/10">
+          <header className="h-16 bg-slate-900/90 dark:bg-slate-950/90 backdrop-blur-xl text-white flex items-center justify-between px-4 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.25)] border border-white/[0.08] relative overflow-hidden">
+            {/* Top lighting glow effect */}
+            <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent"></div>
+            
             <div className="flex items-center gap-3">
               <button 
                 onClick={() => setMobileSidebarOpen(true)}
-                className="p-2 hover:bg-white/10 rounded-xl transition-colors"
+                className="p-2.5 bg-white/[0.06] hover:bg-white/15 rounded-xl transition-all active:scale-95 border border-white/[0.04] flex items-center justify-center cursor-pointer"
+                aria-label="Open menu"
               >
-                <Menu className="w-6 h-6" />
+                <Menu className="w-5 h-5 text-slate-100" />
               </button>
+              
               <div className="flex items-center gap-2">
-                 <div className="bg-farm-500 p-1.5 rounded-lg">
-                    <Leaf className="w-4 h-4 text-white" />
-                 </div>
-                 <h1 className="font-display font-bold text-lg tracking-tight truncate max-w-[150px]">{settings.companyName}</h1>
+                <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-2 rounded-xl shadow-[0_2px_10px_rgba(16,185,129,0.2)]">
+                  <Leaf className="w-3.5 h-3.5 text-white" />
+                </div>
+                <div className="flex flex-col">
+                  <h1 className="font-display font-black text-sm tracking-tight text-white leading-none">
+                    {settings.companyName}
+                  </h1>
+                  <span className="text-[9px] uppercase font-bold tracking-widest text-emerald-400 mt-0.5">
+                    {language === 'fr' ? 'Smart Agro' : 'Smart Agro'}
+                  </span>
+                </div>
               </div>
             </div>
             
             <div className="flex items-center gap-3">
-               {/* Simple mobile language switcher trigger pill */}
-               <button 
-                 onClick={() => setLanguage(language === 'fr' ? 'en' : 'fr')}
-                 className="px-2.5 py-1.5 rounded-xl bg-white/10 text-[10px] font-black uppercase tracking-widest text-[#F9FAFB] border border-white/15 hover:bg-white/20 active:scale-95 transition-all flex items-center gap-1 shrink-0"
-               >
-                 {language === 'fr' ? '🇬🇧 EN' : '🇫🇷 FR'}
-               </button>
-               <div 
-                 onClick={() => setCurrentView('profile')}
-                 className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-xs font-bold shadow-md border border-white/20 uppercase cursor-pointer"
-               >
-                 {(currentEmployee?.name || 'A').charAt(0)}
-               </div>
+              {/* Profile Avatar with status indicator ring */}
+              <button 
+                onClick={() => setCurrentView('profile')}
+                className="relative group focus:outline-none cursor-pointer"
+              >
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 p-[1.5px] transition-transform duration-200 active:scale-90 shadow-md">
+                  <div className="w-full h-full rounded-[10px] bg-slate-900 flex items-center justify-center text-white text-xs font-black uppercase tracking-wider">
+                    {(currentEmployee?.name || 'A').charAt(0)}
+                  </div>
+                </div>
+                {/* Active connection pulse dot */}
+                <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-slate-900 rounded-full shadow-sm">
+                  <span className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-75"></span>
+                </span>
+              </button>
             </div>
           </header>
         </div>
