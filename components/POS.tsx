@@ -1262,12 +1262,12 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
                             <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase mb-1">Solde</p>
                             <p className="text-lg md:text-2xl font-bold text-white">
                                 {new Intl.NumberFormat('fr-FR').format(
-                                    (invoices
+                                    Math.max(0, (invoices
                                     .filter(i => i.boutique === selectedBoutique && new Date(i.date).toDateString() === new Date().toDateString())
                                     .reduce((acc, i) => acc + (i.amountPaid - (i.reimbursement || 0)), 0)) - 
                                     (expenses
                                     .filter(e => e.boutique === selectedBoutique && new Date(e.date).toDateString() === new Date().toDateString())
-                                    .reduce((acc, e) => acc + e.amount, 0))
+                                    .reduce((acc, e) => acc + e.amount, 0)))
                                 )} F
                             </p>
                         </div>

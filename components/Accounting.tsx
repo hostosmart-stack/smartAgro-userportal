@@ -193,7 +193,7 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
   const grossProfit = effectiveRevenue - totalCOGS;
   const totalExpenses = useMemo(() => filteredExpenses.reduce((acc, exp) => acc + exp.amount, 0), [filteredExpenses]);
   const netProfit = grossProfit - totalExpenses;
-  const totalEnCaisse = totalCashCollected - totalExpenses;
+  const totalEnCaisse = Math.max(0, totalCashCollected - totalExpenses);
 
   // --- HANDLERS ---
   const handleDeleteExpense = async (id: string) => {
@@ -271,7 +271,7 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
          <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 w-full xl:w-auto">
              {/* --- TOGGLE DEBTS --- */}
              {activeTab === 'expenses' && (
-                 <label className="flex items-center justify-between sm:justify-start gap-2 cursor-pointer bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm hover:border-farm-300 transition-colors h-10 w-full sm:w-auto">
+                 <label className="flex items-center justify-between sm:justify-start gap-3 cursor-pointer bg-white px-4 rounded-xl border border-gray-200 shadow-sm hover:border-farm-300 hover:shadow-md transition-all h-12 w-full sm:w-auto">
                      <div className="relative">
                          <input 
                              type="checkbox" 
@@ -279,16 +279,16 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
                              checked={includeDebts}
                              onChange={() => setIncludeDebts(!includeDebts)}
                          />
-                         <div className={`block w-8 h-5 rounded-full transition-colors ${includeDebts ? 'bg-[var(--color-farm-500)]' : 'bg-gray-300'}`}></div>
-                         <div className={`dot absolute left-1 top-1 bg-white w-3 h-3 rounded-full transition-transform ${includeDebts ? 'transform translate-x-3' : ''}`}></div>
+                         <div className={`block w-9 h-5.5 rounded-full transition-colors ${includeDebts ? 'bg-[var(--color-farm-500)]' : 'bg-gray-300'}`}></div>
+                         <div className={`dot absolute left-1 top-1 bg-white w-3.5 h-3.5 rounded-full transition-transform ${includeDebts ? 'transform translate-x-3.5' : ''}`}></div>
                      </div>
-                     <span className="text-xs font-bold text-gray-700 whitespace-nowrap">Inclure crédits</span>
+                     <span className="text-sm font-bold text-gray-700 whitespace-nowrap">Inclure crédits</span>
                  </label>
              )}
 
              {canFilterBoutique && (
                  <select 
-                     className="bg-white border border-gray-200 text-gray-700 text-sm font-medium px-3 py-1.5 rounded-lg shadow-sm outline-none cursor-pointer h-10 w-full sm:w-auto"
+                     className="bg-white border border-gray-200 text-gray-700 text-sm font-bold px-4 rounded-xl shadow-sm outline-none cursor-pointer h-12 w-full sm:w-auto hover:border-farm-300 focus:ring-2 focus:ring-farm-500/20 transition-all"
                      value={boutiqueFilter}
                      onChange={e => setBoutiqueFilter(e.target.value)}
                  >
@@ -301,10 +301,10 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
                  </select>
              )}
 
-             <div className="bg-white border border-gray-200 rounded-lg px-2 flex items-center shadow-sm h-10 w-full sm:w-auto">
-                 <Calendar className="w-4 h-4 text-gray-400 ml-2" />
+             <div className="bg-white border border-gray-200 rounded-xl px-4 flex items-center shadow-sm h-12 w-full sm:w-auto hover:border-farm-300 transition-all">
+                 <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
                  <select 
-                    className="bg-transparent text-gray-700 text-sm font-medium px-2 outline-none cursor-pointer flex-1 sm:flex-none"
+                    className="bg-transparent text-gray-700 text-sm font-bold px-2 outline-none cursor-pointer flex-1 sm:flex-none h-full"
                     value={timeRange}
                     onChange={e => setTimeRange(e.target.value as TimeRange)}
                  >
@@ -316,24 +316,24 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
                  </select>
             </div>
 
-             <div className="bg-gray-100 p-1 rounded-lg flex h-10 dark:bg-gray-800 w-full sm:w-auto overflow-x-auto whitespace-nowrap scrollbar-hide">
+             <div className="bg-gray-100 p-1.5 rounded-xl flex h-12 dark:bg-gray-800 w-full sm:w-auto overflow-x-auto whitespace-nowrap scrollbar-hide shadow-inner">
                 <button 
                     onClick={() => setActiveTab('expenses')}
-                    className={`flex-1 sm:flex-none px-3 sm:px-4 rounded-md text-xs sm:text-sm font-medium transition-all ${activeTab === 'expenses' ? 'bg-white text-[var(--color-farm-700)] shadow-sm dark:bg-gray-700 dark:text-[var(--color-farm-400)]' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                    className={`h-full flex-1 sm:flex-none px-4 rounded-lg text-sm font-bold transition-all flex items-center justify-center ${activeTab === 'expenses' ? 'bg-white text-[var(--color-farm-700)] shadow-sm dark:bg-gray-700 dark:text-[var(--color-farm-400)]' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
                 >
                     Résultats
                 </button>
                 <button 
                     onClick={() => setActiveTab('debts')}
-                    className={`flex-1 sm:flex-none px-3 sm:px-4 rounded-md text-xs sm:text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${activeTab === 'debts' ? 'bg-white text-[var(--color-farm-700)] shadow-sm dark:bg-gray-700 dark:text-[var(--color-farm-400)]' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                    className={`h-full flex-1 sm:flex-none px-4 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'debts' ? 'bg-white text-[var(--color-farm-700)] shadow-sm dark:bg-gray-700 dark:text-[var(--color-farm-400)]' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
                 >
-                    Crédits <span className="bg-red-100 text-red-600 px-1.5 rounded-full text-[10px] dark:bg-red-900/30 dark:text-red-400">{unpaidInvoices.length}</span>
+                    Crédits <span className="bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-xs font-bold dark:bg-red-900/30 dark:text-red-400">{unpaidInvoices.length}</span>
                 </button>
                 <button 
                     onClick={() => setActiveTab('transfers')}
-                    className={`flex-1 sm:flex-none px-3 sm:px-4 rounded-md text-xs sm:text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${activeTab === 'transfers' ? 'bg-white text-[var(--color-farm-700)] shadow-sm dark:bg-gray-700 dark:text-[var(--color-farm-400)]' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                    className={`h-full flex-1 sm:flex-none px-4 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'transfers' ? 'bg-white text-[var(--color-farm-700)] shadow-sm dark:bg-gray-700 dark:text-[var(--color-farm-400)]' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
                 >
-                    Transferts <span className="bg-blue-100 text-blue-600 px-1.5 rounded-full text-[10px] dark:bg-blue-900/30 dark:text-blue-400">{filteredTransfers.length}</span>
+                    Transferts <span className="bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full text-xs font-bold dark:bg-blue-900/30 dark:text-blue-400">{filteredTransfers.length}</span>
                 </button>
              </div>
          </div>
@@ -604,7 +604,7 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
             </div>
             
             <div className="overflow-x-auto flex-1">
-                <table className="w-full text-sm text-left">
+                <table className="w-full text-sm text-left min-w-[700px]">
                     <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 uppercase text-[10px] font-bold tracking-wider sticky top-0 z-10 backdrop-blur-sm">
                         <tr>
                             <th className="px-6 py-4">Date</th>
@@ -710,7 +710,7 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
             </div>
             
             <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
+                <table className="w-full text-left text-sm min-w-[700px]">
                     <thead className="bg-gray-50 text-gray-500 uppercase text-xs font-semibold">
                         <tr>
                             <th className="px-6 py-3 font-medium">Client</th>

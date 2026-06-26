@@ -336,12 +336,12 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
            </h2>
            <p className="text-gray-500 text-sm mt-2 font-medium ml-1">Performances et valorisation de votre activité.</p>
         </div>
-           <div className="flex flex-wrap gap-3 justify-center md:justify-end">
+           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto justify-center md:justify-end">
              {canFilterBoutique && (
-                 <div className="relative group">
+                 <div className="relative group w-full sm:w-auto">
                      <Store className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 group-hover:text-farm-600 transition-colors" />
                      <select 
-                         className="pl-10 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none shadow-sm hover:border-farm-300 hover:shadow-md transition-all appearance-none cursor-pointer min-w-[180px]"
+                         className="w-full pl-10 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none shadow-sm hover:border-farm-300 hover:shadow-md transition-all appearance-none cursor-pointer sm:min-w-[180px]"
                          value={boutiqueFilter}
                          onChange={e => setBoutiqueFilter(e.target.value)}
                      >
@@ -358,10 +358,10 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
 
 
 
-            <div className="relative group">
+            <div className="relative group w-full sm:w-auto">
                 <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 group-hover:text-purple-600 transition-colors" />
                 <select 
-                    className="pl-10 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none shadow-sm hover:border-purple-300 hover:shadow-md transition-all appearance-none cursor-pointer min-w-[180px]"
+                    className="w-full pl-10 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none shadow-sm hover:border-purple-300 hover:shadow-md transition-all appearance-none cursor-pointer sm:min-w-[180px]"
                     value={activeCategory}
                     onChange={(e) => setActiveCategory(e.target.value)}
                 >
@@ -416,70 +416,84 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
       {/* --- CHARTS SECTION --- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in fade-in">
            {/* STOCK VALUATION PIE CHART */}
-           <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow duration-300">
-              <div className="flex items-center gap-3 mb-8">
+           <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow duration-300">
+              <div className="flex items-center gap-3 mb-6">
                   <div className="p-2 bg-blue-50 rounded-xl">
                       <PieIcon className="w-5 h-5 text-blue-600" />
                   </div>
                   <h3 className="text-lg font-bold text-gray-900 font-display tracking-tight">Répartition Valeur Stock</h3>
               </div>
-              <div className="h-[300px] flex justify-center relative">
-                  <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                          <Pie 
-                              data={stockValueByCategory} 
-                              dataKey="value" 
-                              nameKey="name" 
-                              cx="50%" 
-                              cy="50%" 
-                              outerRadius={100} 
-                              innerRadius={70}
-                              paddingAngle={5}
-                              cornerRadius={6}
-                          >
-                              {stockValueByCategory.map((entry, index) => <Cell key={index} fill={getCategoryColor(entry.name)} strokeWidth={0} />)}
-                          </Pie>
-                          <Tooltip 
-                              formatter={(val: number) => formatCurrency(val)} 
-                              contentStyle={{ 
-                                  borderRadius: '16px', 
-                                  border: 'none', 
-                                  boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
-                                  fontFamily: 'Plus Jakarta Sans',
-                                  padding: '12px 16px'
-                              }} 
-                              itemStyle={{ color: '#374151', fontWeight: 600 }}
-                          />
-                          <Legend 
-                              layout="vertical" 
-                              verticalAlign="middle" 
-                              align="right" 
-                              wrapperStyle={{fontSize: '12px', fontFamily: 'Plus Jakarta Sans', fontWeight: 500, color: '#6b7280'}}
-                              iconType="circle"
-                              iconSize={8}
-                          />
-                      </PieChart>
-                  </ResponsiveContainer>
-                  {/* Center Text Overlay */}
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none pr-24">
-                      <div className="text-center">
-                          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Total</span>
-                          <span className="text-lg font-bold text-gray-900">{formatCurrency(totalInventoryValueCost).split(' ')[0]}</span>
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-6 flex-1 w-full">
+                  {/* Center Pie Container */}
+                  <div className="relative w-full sm:w-1/2 h-[220px] flex items-center justify-center">
+                      <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                              <Pie 
+                                  data={stockValueByCategory} 
+                                  dataKey="value" 
+                                  nameKey="name" 
+                                  cx="50%" 
+                                  cy="50%" 
+                                  outerRadius={85} 
+                                  innerRadius={60}
+                                  paddingAngle={4}
+                                  cornerRadius={5}
+                              >
+                                  {stockValueByCategory.map((entry, index) => (
+                                      <Cell key={index} fill={getCategoryColor(entry.name)} strokeWidth={0} />
+                                  ))}
+                              </Pie>
+                              <Tooltip 
+                                  formatter={(val: number) => formatCurrency(val)} 
+                                  contentStyle={{ 
+                                      borderRadius: '16px', 
+                                      border: 'none', 
+                                      boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+                                      fontFamily: 'Plus Jakarta Sans',
+                                      padding: '10px 14px',
+                                      fontSize: '11px'
+                                  }} 
+                                  itemStyle={{ color: '#374151', fontWeight: 600 }}
+                              />
+                          </PieChart>
+                      </ResponsiveContainer>
+                      {/* Center Text Overlay */}
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                          <div className="text-center">
+                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Total</span>
+                              <span className="text-base font-bold text-gray-900">{formatCurrency(totalInventoryValueCost).split(' ')[0]}</span>
+                          </div>
                       </div>
+                  </div>
+                  
+                  {/* Custom Legend */}
+                  <div className="w-full sm:w-1/2 grid grid-cols-1 gap-2 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
+                     {stockValueByCategory.map((entry, index) => {
+                         const percentage = totalInventoryValueCost > 0 ? ((entry.value / totalInventoryValueCost) * 100).toFixed(1) : '0';
+                         return (
+                             <div key={index} className="flex items-start gap-2 p-1.5 rounded-xl hover:bg-gray-50/80 transition-colors">
+                                 <div className="w-3.5 h-3.5 rounded-full mt-0.5 shrink-0" style={{ backgroundColor: getCategoryColor(entry.name) }}></div>
+                                 <div className="min-w-0 flex-1">
+                                     <p className="text-xs font-bold text-gray-800 truncate" title={entry.name}>{entry.name}</p>
+                                     <p className="text-[10px] font-mono text-gray-500 font-semibold">{formatCurrency(entry.value)} ({percentage}%)</p>
+                                 </div>
+                             </div>
+                         );
+                     })}
                   </div>
               </div>
            </div>
 
            {/* STOCK VALUATION TABLE */}
-           <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow duration-300">
+           <div className="bg-white p-4 md:p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow duration-300">
               <div className="flex items-center gap-3 mb-6">
                   <div className="p-2 bg-emerald-50 rounded-xl">
                       <Package className="w-5 h-5 text-emerald-600" />
                   </div>
                   <h3 className="text-lg font-bold text-gray-900 font-display tracking-tight">Valorisation Détaillée</h3>
               </div>
-              <div className="overflow-y-auto max-h-[300px] pr-2 custom-scrollbar flex-1">
-                 <table className="w-full text-sm">
+              <div className="overflow-y-auto overflow-x-auto max-h-[300px] pr-2 custom-scrollbar flex-1 w-full">
+                 <table className="w-full text-sm min-w-[500px]">
                     <thead className="sticky top-0 bg-white shadow-sm z-10">
                        <tr className="text-left text-gray-400 text-[10px] uppercase font-bold font-display tracking-wider">
                           <th className="pb-4 pl-2 bg-white">Produit</th>
@@ -528,64 +542,80 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
            </div>
 
            {/* PROFIT PIE CHART */}
-           <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow duration-300">
-              <div className="flex items-center gap-3 mb-8">
+           <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow duration-300">
+              <div className="flex items-center gap-3 mb-6">
                   <div className="p-2 bg-purple-50 rounded-xl">
                       <TrendingUp className="w-5 h-5 text-purple-600" />
                   </div>
                   <h3 className="text-lg font-bold text-gray-900 font-display tracking-tight">Top Profits (Produits)</h3>
               </div>
-              <div className="h-[300px] flex justify-center relative">
-                 <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                        <Pie 
-                            data={profitByProduct} 
-                            dataKey="value" 
-                            nameKey="name" 
-                            cx="50%" 
-                            cy="50%" 
-                            outerRadius={100} 
-                            innerRadius={70}
-                            paddingAngle={5}
-                            cornerRadius={6}
-                        >
-                            {profitByProduct.map((entry, index) => {
-                                const product = products.find(p => entry.name.startsWith(p.name));
-                                return <Cell key={index} fill={product ? getCategoryColor(product.category) : COLORS[index % COLORS.length]} strokeWidth={0} />
-                            })}
-                        </Pie>
-                        <Tooltip 
-                            formatter={(val: number) => formatCurrency(val)} 
-                            contentStyle={{ 
-                                borderRadius: '16px', 
-                                border: 'none', 
-                                boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
-                                fontFamily: 'Plus Jakarta Sans',
-                                padding: '12px 16px'
-                            }} 
-                            itemStyle={{ color: '#374151', fontWeight: 600 }}
-                        />
-                        <Legend 
-                            layout="vertical" 
-                            verticalAlign="middle" 
-                            align="right" 
-                            wrapperStyle={{fontSize: '12px', fontFamily: 'Plus Jakarta Sans', fontWeight: 500, color: '#6b7280'}}
-                            iconType="circle"
-                            iconSize={8}
-                        />
-                    </PieChart>
-                 </ResponsiveContainer>
-                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none pr-24">
-                      <div className="text-center">
-                          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Top 6</span>
-                          <span className="text-lg font-bold text-gray-900">Profit</span>
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-6 flex-1 w-full">
+                  {/* Center Pie Container */}
+                  <div className="relative w-full sm:w-1/2 h-[220px] flex items-center justify-center">
+                      <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                              <Pie 
+                                  data={profitByProduct} 
+                                  dataKey="value" 
+                                  nameKey="name" 
+                                  cx="50%" 
+                                  cy="50%" 
+                                  outerRadius={85} 
+                                  innerRadius={60}
+                                  paddingAngle={4}
+                                  cornerRadius={5}
+                              >
+                                  {profitByProduct.map((entry, index) => {
+                                      const product = products.find(p => entry.name.startsWith(p.name));
+                                      return <Cell key={index} fill={product ? getCategoryColor(product.category) : COLORS[index % COLORS.length]} strokeWidth={0} />
+                                  })}
+                              </Pie>
+                              <Tooltip 
+                                  formatter={(val: number) => formatCurrency(val)} 
+                                  contentStyle={{ 
+                                      borderRadius: '16px', 
+                                      border: 'none', 
+                                      boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+                                      fontFamily: 'Plus Jakarta Sans',
+                                      padding: '10px 14px',
+                                      fontSize: '11px'
+                                  }} 
+                                  itemStyle={{ color: '#374151', fontWeight: 600 }}
+                              />
+                          </PieChart>
+                      </ResponsiveContainer>
+                      {/* Center Text Overlay */}
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                          <div className="text-center">
+                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Top 6</span>
+                              <span className="text-base font-bold text-gray-900 font-display">Profit</span>
+                          </div>
                       </div>
+                  </div>
+                  
+                  {/* Custom Legend */}
+                  <div className="w-full sm:w-1/2 grid grid-cols-1 gap-2 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
+                     {profitByProduct.map((entry, index) => {
+                         const product = products.find(p => entry.name.startsWith(p.name));
+                         const totalProfit = profitByProduct.reduce((acc, item) => acc + item.value, 0);
+                         const percentage = totalProfit > 0 ? ((entry.value / totalProfit) * 100).toFixed(1) : '0';
+                         const color = product ? getCategoryColor(product.category) : COLORS[index % COLORS.length];
+                         return (
+                             <div key={index} className="flex items-start gap-2 p-1.5 rounded-xl hover:bg-gray-50/80 transition-colors">
+                                 <div className="w-3.5 h-3.5 rounded-full mt-0.5 shrink-0" style={{ backgroundColor: color }}></div>
+                                 <div className="min-w-0 flex-1">
+                                     <p className="text-xs font-bold text-gray-800 truncate" title={entry.name}>{entry.name}</p>
+                                     <p className="text-[10px] font-mono text-gray-500 font-semibold">{formatCurrency(entry.value)} ({percentage}%)</p>
+                                 </div>
+                             </div>
+                         );
+                     })}
                   </div>
               </div>
            </div>
 
            {/* PROFIT TABLE */}
-           <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow duration-300">
+           <div className="bg-white p-4 md:p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow duration-300">
               <div className="flex items-center gap-3 mb-6">
                   <div className="p-2 bg-amber-50 rounded-xl">
                       <DollarSign className="w-5 h-5 text-amber-600" />
