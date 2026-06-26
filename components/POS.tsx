@@ -1241,7 +1241,7 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
                                 {new Intl.NumberFormat('fr-FR').format(
                                     invoices
                                     .filter(i => i.boutique === selectedBoutique && new Date(i.date).toDateString() === new Date().toDateString())
-                                    .reduce((acc, i) => acc + i.amountPaid, 0)
+                                    .reduce((acc, i) => acc + (i.amountPaid - (i.reimbursement || 0)), 0)
                                 )} F
                             </p>
                         </div>
@@ -1264,7 +1264,7 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
                                 {new Intl.NumberFormat('fr-FR').format(
                                     (invoices
                                     .filter(i => i.boutique === selectedBoutique && new Date(i.date).toDateString() === new Date().toDateString())
-                                    .reduce((acc, i) => acc + i.amountPaid, 0)) - 
+                                    .reduce((acc, i) => acc + (i.amountPaid - (i.reimbursement || 0)), 0)) - 
                                     (expenses
                                     .filter(e => e.boutique === selectedBoutique && new Date(e.date).toDateString() === new Date().toDateString())
                                     .reduce((acc, e) => acc + e.amount, 0))
@@ -1378,7 +1378,7 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
                          // Check cash balance
                          const currentCash = invoices
                             .filter(i => i.boutique === selectedBoutique && !i.deleted)
-                            .reduce((acc, i) => acc + i.amountPaid, 0) - 
+                            .reduce((acc, i) => acc + (i.amountPaid - (i.reimbursement || 0)), 0) - 
                             expenses
                             .filter(e => e.boutique === selectedBoutique && !e.deleted)
                             .reduce((acc, e) => acc + e.amount, 0);

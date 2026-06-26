@@ -48,6 +48,20 @@ export const Invoices: React.FC<InvoicesProps> = ({ invoices, products, onUpdate
   const [wholesaleFilter, setWholesaleFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
+
+  const customerDebtsMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    invoices.forEach(inv => {
+      if (inv.status !== 'PAYÉ') {
+        const debt = inv.remainingDebt !== undefined ? inv.remainingDebt : Math.max(0, inv.total - (inv.amountPaid || 0) - (inv.advanceUsed || 0));
+        if (debt > 0) {
+          const key = (inv.customerName || '').toLowerCase().trim();
+          map[key] = (map[key] || 0) + debt;
+        }
+      }
+    });
+    return map;
+  }, [invoices]);
   
   // Payment Recovery State
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -667,7 +681,7 @@ export const Invoices: React.FC<InvoicesProps> = ({ invoices, products, onUpdate
                     </td>
                     <td className="px-6 py-4 text-gray-500">{customer.phone || '-'}</td>
                     <td className="px-6 py-4 text-right font-bold text-rose-600">
-                      {customer.outstandingDebt > 0 ? `${customer.outstandingDebt.toLocaleString()} FCFA` : '-'}
+                      {(customerDebtsMap[(customer.name || '').toLowerCase().trim()] || 0) > 0 ? `${(customerDebtsMap[(customer.name || '').toLowerCase().trim()] || 0).toLocaleString()} FCFA` : '-'}
                     </td>
                     <td className="px-6 py-4 text-right font-bold text-blue-600">
                       {customer.advanceBalance > 0 ? `${customer.advanceBalance.toLocaleString()} FCFA` : '-'}
@@ -717,7 +731,7 @@ export const Invoices: React.FC<InvoicesProps> = ({ invoices, products, onUpdate
                   </div>
                   <div>
                     <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">Dette Restante</p>
-                    <p className="text-2xl font-black text-rose-600">{selectedCustomer.outstandingDebt.toLocaleString()} FCFA</p>
+                    <p className="text-2xl font-black text-rose-600">{(customerDebtsMap[(selectedCustomer.name || '').toLowerCase().trim()] || 0).toLocaleString()} FCFA</p>
                   </div>
                 </div>
                 <div className="bg-white p-6 rounded-[2rem] border border-blue-100 shadow-sm flex items-center gap-4">

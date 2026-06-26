@@ -76,7 +76,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const todayOutstandingDebt = useMemo(() => {
     return todayInvoices
       .filter(inv => inv.status !== 'PAYÉ')
-      .reduce((acc, inv) => acc + (inv.total - inv.amountPaid), 0);
+      .reduce((acc, inv) => acc + (inv.remainingDebt !== undefined ? inv.remainingDebt : Math.max(0, inv.total - (inv.amountPaid || 0) - (inv.advanceUsed || 0))), 0);
   }, [todayInvoices]);
 
   const todayExpensesAmount = useMemo(() => {
@@ -181,7 +181,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const totalDebts = useMemo(() => {
     return filteredInvoices
       .filter(inv => inv.status !== 'PAYÉ')
-      .reduce((acc, inv) => acc + (inv.total - inv.amountPaid), 0);
+      .reduce((acc, inv) => acc + (inv.remainingDebt !== undefined ? inv.remainingDebt : Math.max(0, inv.total - (inv.amountPaid || 0) - (inv.advanceUsed || 0))), 0);
   }, [filteredInvoices]);
 
   // Filtered Revenue for Charts if specific category selected
@@ -285,7 +285,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       
       const debts = boutiqueInvoices
         .filter(inv => inv.status !== 'PAYÉ')
-        .reduce((acc, inv) => acc + (inv.total - inv.amountPaid), 0);
+        .reduce((acc, inv) => acc + (inv.remainingDebt !== undefined ? inv.remainingDebt : Math.max(0, inv.total - (inv.amountPaid || 0) - (inv.advanceUsed || 0))), 0);
 
       return {
         ...b,

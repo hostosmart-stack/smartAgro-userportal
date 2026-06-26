@@ -134,9 +134,29 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
   }, [timeRange, boutiqueFilter, expenseCategoryFilter, expenseSearchTerm, expenseDateFilter]);
 
   // --- CALCULATIONS ---
+  // Unpaid Invoices List (Show all unpaid regardless of date filter, usually debts persist)
+  const unpaidInvoices = useMemo(() => 
+    invoices.filter(inv => inv.status !== 'PAYÉ' && (boutiqueFilter === 'all' || inv.boutique === boutiqueFilter)).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+  [invoices, boutiqueFilter]);
+
   const totalRevenueBilled = useMemo(() => filteredInvoices.reduce((acc, inv) => acc + inv.total, 0), [filteredInvoices]);
-  const totalCashCollected = useMemo(() => filteredInvoices.reduce((acc, inv) => acc + inv.amountPaid, 0), [filteredInvoices]);
-  const totalReceivables = useMemo(() => filteredInvoices.reduce((acc, inv) => acc + (inv.total - inv.amountPaid), 0), [filteredInvoices]);
+  const totalCashCollected = useMemo(() => filteredInvoices.reduce((acc, inv) => acc + (inv.amountPaid - (inv.reimbursement || 0)), 0), [filteredInvoices]);
+  const totalReceivables = useMemo(() => filteredInvoices.reduce((acc, inv) => {
+    const debt = inv.remainingDebt !== undefined ? inv.remainingDebt : Math.max(0, inv.total - (inv.amountPaid || 0) - (inv.advanceUsed || 0));
+    return acc + debt;
+  }, 0), [filteredInvoices]);
+
+  const totalUnpaidDebts = useMemo(() => {
+    return unpaidInvoices.reduce((acc, inv) => {
+      const debt = inv.remainingDebt !== undefined ? inv.remainingDebt : Math.max(0, inv.total - (inv.amountPaid || 0) - (inv.advanceUsed || 0));
+      return acc + debt;
+    }, 0);
+  }, [unpaidInvoices]);
+
+  const recoveryRate = useMemo(() => {
+    if (totalRevenueBilled <= 0) return 0;
+    return Math.min(100, (totalCashCollected / totalRevenueBilled) * 100);
+  }, [totalCashCollected, totalRevenueBilled]);
 
   const totalCOGS = useMemo(() => {
     const getMultiplier = (unit: string) => {
@@ -174,11 +194,6 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
   const totalExpenses = useMemo(() => filteredExpenses.reduce((acc, exp) => acc + exp.amount, 0), [filteredExpenses]);
   const netProfit = grossProfit - totalExpenses;
   const totalEnCaisse = totalCashCollected - totalExpenses;
-
-  // Unpaid Invoices List (Show all unpaid regardless of date filter, usually debts persist)
-  const unpaidInvoices = useMemo(() => 
-    invoices.filter(inv => inv.status !== 'PAYÉ' && (boutiqueFilter === 'all' || inv.boutique === boutiqueFilter)).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
-  [invoices, boutiqueFilter]);
 
   // --- HANDLERS ---
   const handleDeleteExpense = async (id: string) => {
@@ -253,10 +268,10 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
             <p className="text-gray-500 text-sm mt-1">Suivi financier simplifié.</p>
          </div>
          
-         <div className="flex flex-wrap items-center gap-3">
+         <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 w-full xl:w-auto">
              {/* --- TOGGLE DEBTS --- */}
              {activeTab === 'expenses' && (
-                 <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm hover:border-farm-300 transition-colors h-10">
+                 <label className="flex items-center justify-between sm:justify-start gap-2 cursor-pointer bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm hover:border-farm-300 transition-colors h-10 w-full sm:w-auto">
                      <div className="relative">
                          <input 
                              type="checkbox" 
@@ -273,7 +288,7 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
 
              {canFilterBoutique && (
                  <select 
-                     className="bg-white border border-gray-200 text-gray-700 text-sm font-medium px-3 py-1.5 rounded-lg shadow-sm outline-none cursor-pointer h-10"
+                     className="bg-white border border-gray-200 text-gray-700 text-sm font-medium px-3 py-1.5 rounded-lg shadow-sm outline-none cursor-pointer h-10 w-full sm:w-auto"
                      value={boutiqueFilter}
                      onChange={e => setBoutiqueFilter(e.target.value)}
                  >
@@ -286,10 +301,10 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
                  </select>
              )}
 
-             <div className="bg-white border border-gray-200 rounded-lg px-2 flex items-center shadow-sm h-10">
+             <div className="bg-white border border-gray-200 rounded-lg px-2 flex items-center shadow-sm h-10 w-full sm:w-auto">
                  <Calendar className="w-4 h-4 text-gray-400 ml-2" />
                  <select 
-                    className="bg-transparent text-gray-700 text-sm font-medium px-2 outline-none cursor-pointer"
+                    className="bg-transparent text-gray-700 text-sm font-medium px-2 outline-none cursor-pointer flex-1 sm:flex-none"
                     value={timeRange}
                     onChange={e => setTimeRange(e.target.value as TimeRange)}
                  >
@@ -301,24 +316,24 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
                  </select>
             </div>
 
-             <div className="bg-gray-100 p-1 rounded-lg flex h-10 dark:bg-gray-800">
+             <div className="bg-gray-100 p-1 rounded-lg flex h-10 dark:bg-gray-800 w-full sm:w-auto overflow-x-auto whitespace-nowrap scrollbar-hide">
                 <button 
                     onClick={() => setActiveTab('expenses')}
-                    className={`px-4 rounded-md text-sm font-medium transition-all ${activeTab === 'expenses' ? 'bg-white text-[var(--color-farm-700)] shadow-sm dark:bg-gray-700 dark:text-[var(--color-farm-400)]' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                    className={`flex-1 sm:flex-none px-3 sm:px-4 rounded-md text-xs sm:text-sm font-medium transition-all ${activeTab === 'expenses' ? 'bg-white text-[var(--color-farm-700)] shadow-sm dark:bg-gray-700 dark:text-[var(--color-farm-400)]' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
                 >
                     Résultats
                 </button>
                 <button 
                     onClick={() => setActiveTab('debts')}
-                    className={`px-4 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'debts' ? 'bg-white text-[var(--color-farm-700)] shadow-sm dark:bg-gray-700 dark:text-[var(--color-farm-400)]' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                    className={`flex-1 sm:flex-none px-3 sm:px-4 rounded-md text-xs sm:text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${activeTab === 'debts' ? 'bg-white text-[var(--color-farm-700)] shadow-sm dark:bg-gray-700 dark:text-[var(--color-farm-400)]' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
                 >
-                    Crédits <span className="bg-red-100 text-red-600 px-1.5 rounded-full text-xs dark:bg-red-900/30 dark:text-red-400">{unpaidInvoices.length}</span>
+                    Crédits <span className="bg-red-100 text-red-600 px-1.5 rounded-full text-[10px] dark:bg-red-900/30 dark:text-red-400">{unpaidInvoices.length}</span>
                 </button>
                 <button 
                     onClick={() => setActiveTab('transfers')}
-                    className={`px-4 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'transfers' ? 'bg-white text-[var(--color-farm-700)] shadow-sm dark:bg-gray-700 dark:text-[var(--color-farm-400)]' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                    className={`flex-1 sm:flex-none px-3 sm:px-4 rounded-md text-xs sm:text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${activeTab === 'transfers' ? 'bg-white text-[var(--color-farm-700)] shadow-sm dark:bg-gray-700 dark:text-[var(--color-farm-400)]' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
                 >
-                    Transferts <span className="bg-blue-100 text-blue-600 px-1.5 rounded-full text-xs dark:bg-blue-900/30 dark:text-blue-400">{filteredTransfers.length}</span>
+                    Transferts <span className="bg-blue-100 text-blue-600 px-1.5 rounded-full text-[10px] dark:bg-blue-900/30 dark:text-blue-400">{filteredTransfers.length}</span>
                 </button>
              </div>
          </div>
@@ -378,13 +393,13 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
             {/* --- SALES LIST --- */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700 overflow-hidden flex flex-col h-[600px]">
               <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex flex-col gap-3 shrink-0 bg-gray-50/50 dark:bg-gray-800/50">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <h3 className="font-bold text-gray-900 dark:text-white text-sm uppercase tracking-wide flex items-center gap-2">
                         <div className="w-1 h-4 bg-farm-500 rounded-full"></div>
                         Détail des Ventes
                       </h3>
                       <select 
-                          className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs font-medium px-3 py-1.5 rounded-lg outline-none cursor-pointer hover:border-farm-400 transition-colors"
+                          className="w-full sm:w-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs font-medium px-3 py-1.5 rounded-lg outline-none cursor-pointer hover:border-farm-400 transition-colors"
                           value={salesStatusFilter}
                           onChange={e => setSalesStatusFilter(e.target.value)}
                       >
@@ -393,17 +408,17 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
                           <option value="impaye">Impayé / Partiel</option>
                       </select>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                       <input 
                           type="text" 
                           placeholder="Chercher un client..." 
-                          className="flex-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs px-3 py-2 rounded-lg outline-none focus:border-farm-400 focus:ring-2 focus:ring-farm-100 dark:focus:ring-farm-900 transition-all"
+                          className="w-full sm:flex-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs px-3 py-2 rounded-lg outline-none focus:border-farm-400 focus:ring-2 focus:ring-farm-100 dark:focus:ring-farm-900 transition-all"
                           value={salesSearchTerm}
                           onChange={e => setSalesSearchTerm(e.target.value)}
                       />
                       <input 
                           type="date" 
-                          className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs px-3 py-2 rounded-lg outline-none focus:border-farm-400 focus:ring-2 focus:ring-farm-100 dark:focus:ring-farm-900 transition-all"
+                          className="w-full sm:w-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs px-3 py-2 rounded-lg outline-none focus:border-farm-400 focus:ring-2 focus:ring-farm-100 dark:focus:ring-farm-900 transition-all"
                           value={salesDateFilter}
                           onChange={e => setSalesDateFilter(e.target.value)}
                       />
@@ -477,13 +492,13 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
             {/* --- EXPENSE LIST --- */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700 overflow-hidden flex flex-col h-[600px]">
               <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex flex-col gap-3 shrink-0 bg-gray-50/50 dark:bg-gray-800/50">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <h3 className="font-bold text-gray-900 dark:text-white text-sm uppercase tracking-wide flex items-center gap-2">
                         <div className="w-1 h-4 bg-red-500 rounded-full"></div>
                         Détail des Dépenses
                       </h3>
                       <select 
-                          className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs font-medium px-3 py-1.5 rounded-lg outline-none cursor-pointer hover:border-farm-400 transition-colors"
+                          className="w-full sm:w-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs font-medium px-3 py-1.5 rounded-lg outline-none cursor-pointer hover:border-farm-400 transition-colors"
                           value={expenseCategoryFilter}
                           onChange={e => setExpenseCategoryFilter(e.target.value)}
                       >
@@ -496,17 +511,17 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
                           <option value="DIVERS">Divers</option>
                       </select>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                       <input 
                           type="text" 
                           placeholder="Chercher un motif..." 
-                          className="flex-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs px-3 py-2 rounded-lg outline-none focus:border-farm-400 focus:ring-2 focus:ring-farm-100 dark:focus:ring-farm-900 transition-all"
+                          className="w-full sm:flex-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs px-3 py-2 rounded-lg outline-none focus:border-farm-400 focus:ring-2 focus:ring-farm-100 dark:focus:ring-farm-900 transition-all"
                           value={expenseSearchTerm}
                           onChange={e => setExpenseSearchTerm(e.target.value)}
                       />
                       <input 
                           type="date" 
-                          className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs px-3 py-2 rounded-lg outline-none focus:border-farm-400 focus:ring-2 focus:ring-farm-100 dark:focus:ring-farm-900 transition-all"
+                          className="w-full sm:w-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs px-3 py-2 rounded-lg outline-none focus:border-farm-400 focus:ring-2 focus:ring-farm-100 dark:focus:ring-farm-900 transition-all"
                           value={expenseDateFilter}
                           onChange={e => setExpenseDateFilter(e.target.value)}
                       />
@@ -669,7 +684,7 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <SummaryCard 
                 title="Crédits Clients" 
-                value={formatCurrency(totalReceivables)} 
+                value={formatCurrency(totalUnpaidDebts)} 
                 icon={AlertCircle} 
                 iconColor="text-red-600"
                 bgColor="bg-red-50"
@@ -679,11 +694,11 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
                 <p className="text-sm font-medium text-gray-500">Taux de Recouvrement</p>
                 <div className="flex items-end gap-2 mt-1">
                     <h3 className="text-2xl font-bold text-gray-900">
-                        {totalRevenueBilled > 0 ? ((totalCashCollected / totalRevenueBilled) * 100).toFixed(1) : 0}%
+                        {recoveryRate.toFixed(1)}%
                     </h3>
                 </div>
                 <div className="w-full bg-gray-100 h-1.5 rounded-full mt-3 overflow-hidden">
-                    <div className="h-full bg-farm-500" style={{ width: `${totalRevenueBilled > 0 ? (totalCashCollected / totalRevenueBilled) * 100 : 0}%` }}></div>
+                    <div className="h-full bg-farm-500" style={{ width: `${recoveryRate}%` }}></div>
                 </div>
             </div>
         </div>
@@ -730,7 +745,7 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
                                    <td className="px-6 py-4 text-right text-green-600">{formatCurrency(inv.amountPaid)}</td>
                                    <td className="px-6 py-4 text-right">
                                        <span className="bg-red-50 text-red-600 px-2 py-1 rounded-md font-bold text-xs">
-                                           {formatCurrency(inv.total - inv.amountPaid)}
+                                           {formatCurrency(inv.remainingDebt !== undefined ? inv.remainingDebt : Math.max(0, inv.total - (inv.amountPaid || 0) - (inv.advanceUsed || 0)))}
                                        </span>
                                    </td>
                                    <td className="px-6 py-4 text-center">
