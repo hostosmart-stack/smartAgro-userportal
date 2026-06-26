@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { onAuthStateChanged, User, signOut } from './services/firebase';
 import { auth } from './services/firebase';
 import { Sidebar } from './components/Sidebar';
@@ -103,6 +103,52 @@ const InnerApp = () => {
   const [preSelectedTransferProduct, setPreSelectedTransferProduct] = useState<string | null>(null);
   const [dismissLicenseBanner, setDismissLicenseBanner] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  // Synchronize state with Browser History for Back Button support
+  const isPopStateRef = useRef(false);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const handlePopState = (event: PopStateEvent) => {
+      const state = event.state;
+      if (state && 'currentView' in state) {
+        isPopStateRef.current = true;
+        setCurrentView(state.currentView);
+        setActiveCategory(state.activeCategory || null);
+        setTimeout(() => {
+          isPopStateRef.current = false;
+        }, 50);
+      } else {
+        isPopStateRef.current = true;
+        setCurrentView('dashboard');
+        setActiveCategory(null);
+        setTimeout(() => {
+          isPopStateRef.current = false;
+        }, 50);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    if (!window.history.state || !('currentView' in window.history.state)) {
+      window.history.replaceState({ currentView, activeCategory }, '');
+    }
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    if (isPopStateRef.current) return;
+
+    const currentState = window.history.state;
+    if (!currentState || currentState.currentView !== currentView || currentState.activeCategory !== activeCategory) {
+      window.history.pushState({ currentView, activeCategory }, '');
+    }
+  }, [currentView, activeCategory, user]);
 
   const categories = useMemo(() => {
     return settings.customCategories || [
@@ -739,24 +785,24 @@ const InnerApp = () => {
             {/* Top lighting glow effect */}
             <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent"></div>
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
               <button 
                 onClick={() => setMobileSidebarOpen(true)}
-                className="p-2.5 bg-white/[0.06] hover:bg-white/15 rounded-xl transition-all active:scale-95 border border-white/[0.04] flex items-center justify-center cursor-pointer"
+                className="p-2.5 bg-white/[0.06] hover:bg-white/15 rounded-xl transition-all active:scale-95 border border-white/[0.04] flex items-center justify-center cursor-pointer shrink-0"
                 aria-label="Open menu"
               >
                 <Menu className="w-5 h-5 text-slate-100" />
               </button>
               
-              <div className="flex items-center gap-2">
-                <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-2 rounded-xl shadow-[0_2px_10px_rgba(16,185,129,0.2)]">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-2 rounded-xl shadow-[0_2px_10px_rgba(16,185,129,0.2)] shrink-0">
                   <Leaf className="w-3.5 h-3.5 text-white" />
                 </div>
-                <div className="flex flex-col">
-                  <h1 className="font-display font-black text-sm tracking-tight text-white leading-none">
+                <div className="flex flex-col min-w-0 flex-1">
+                  <h1 className="font-display font-black text-xs sm:text-sm tracking-tight text-white leading-none truncate max-w-[120px] xs:max-w-[160px] sm:max-w-none">
                     {settings.companyName}
                   </h1>
-                  <span className="text-[9px] uppercase font-bold tracking-widest text-emerald-400 mt-0.5">
+                  <span className="text-[8px] sm:text-[9px] uppercase font-bold tracking-widest text-emerald-400 mt-0.5 truncate">
                     {language === 'fr' ? 'Smart Agro' : 'Smart Agro'}
                   </span>
                 </div>

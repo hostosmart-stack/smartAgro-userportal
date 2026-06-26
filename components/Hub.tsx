@@ -176,19 +176,19 @@ export const Hub: React.FC<HubProps> = ({
       
       {/* Navigation Header */}
       <div className="w-full px-4 sm:px-6 md:px-16 pt-4 sticky top-0 z-50 shrink-0">
-        <nav className="w-full bg-white/90 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-250/20 dark:border-slate-800/80 shadow-[0_10px_35px_rgba(0,0,0,0.03)] dark:shadow-[0_10px_35px_rgba(0,0,0,0.4)] rounded-2xl py-3 px-4 md:px-8 flex items-center justify-between transition-all duration-300">
-          <div className="flex items-center gap-3">
-            <div className="bg-gradient-to-tr from-farm-500 to-emerald-600 p-2.5 rounded-2xl shadow-lg shadow-farm-500/15">
-              <LayoutDashboard className="w-5 h-5 text-white" />
+        <nav className="w-full bg-white/90 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-250/20 dark:border-slate-800/80 shadow-[0_10px_35px_rgba(0,0,0,0.03)] dark:shadow-[0_10px_35px_rgba(0,0,0,0.4)] rounded-2xl py-3 px-3 sm:px-4 md:px-8 flex items-center justify-between transition-all duration-300 min-w-0 gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="bg-gradient-to-tr from-farm-500 to-emerald-600 p-2 sm:p-2.5 rounded-xl sm:rounded-2xl shadow-lg shadow-farm-500/15 shrink-0">
+              <LayoutDashboard className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
-            <div className="flex flex-col">
-              <span className="text-lg font-display font-black text-slate-900 dark:text-white tracking-tight leading-tight">SMART AGRO</span>
-              <span className="text-[9px] font-black text-farm-500 tracking-wider uppercase leading-none">{t('hub.nav.hub_grid')}</span>
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm sm:text-lg font-display font-black text-slate-900 dark:text-white tracking-tight leading-none truncate">SMART AGRO</span>
+              <span className="text-[8px] sm:text-[9px] font-black text-farm-500 tracking-wider uppercase leading-none truncate mt-0.5">{t('hub.nav.hub_grid')}</span>
             </div>
           </div>
 
           {/* Dynamic Navigation Links arranged elegantly */}
-          <div className="hidden lg:flex items-center gap-2 font-sans bg-slate-100/60 dark:bg-slate-800/40 p-1 rounded-2xl border border-slate-200/40 dark:border-slate-800/40 shadow-inner">
+          <div className="hidden lg:flex items-center gap-2 font-sans bg-slate-100/60 dark:bg-slate-800/40 p-1 rounded-2xl border border-slate-200/40 dark:border-slate-800/40 shadow-inner shrink-0">
             <a href="#" className="text-xs font-black text-farm-600 dark:text-farm-400 uppercase tracking-wider transition-all flex items-center gap-1.5 bg-white dark:bg-slate-900 px-4 py-2 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800/20">
               <span>{t('hub.nav.home')}</span>
               <span className="w-1.5 h-1.5 rounded-full bg-farm-500 animate-pulse"></span>
@@ -197,31 +197,15 @@ export const Hub: React.FC<HubProps> = ({
           </div>
 
           {/* Action Controls & Logout */}
-          <div className="flex items-center gap-3.5">
-            {/* Language Switcher pill */}
-            <div className="flex items-center bg-slate-100/80 dark:bg-slate-800/80 p-0.5 rounded-xl border border-slate-200/50 dark:border-slate-700/50 text-[10px]">
-              <button 
-                onClick={() => setLanguage('fr')} 
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg font-black transition-all ${language === 'fr' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
-              >
-                <span>🇫🇷</span> <span className="hidden sm:inline">FR</span>
-              </button>
-              <button 
-                onClick={() => setLanguage('en')} 
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg font-black transition-all ${language === 'en' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
-              >
-                <span>🇬🇧</span> <span className="hidden sm:inline">EN</span>
-              </button>
-            </div>
-
-            <div className="hidden md:flex flex-col items-end mr-1 text-right font-sans">
-              <span className="text-xs font-black text-slate-850 dark:text-slate-100 uppercase tracking-tight">{userName}</span>
-              <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mt-0.5">{userRole}</span>
+          <div className="flex items-center gap-2 sm:gap-3.5 shrink-0 min-w-0">
+            <div className="hidden md:flex flex-col items-end mr-1 text-right font-sans min-w-0">
+              <span className="text-xs font-black text-slate-850 dark:text-slate-100 uppercase tracking-tight truncate max-w-[120px]">{userName}</span>
+              <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mt-0.5 truncate max-w-[100px]">{userRole}</span>
             </div>
             
             <button
               onClick={onLogout}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/50 dark:border-slate-750 text-slate-650 dark:text-slate-350 rounded-xl font-black text-xs hover:bg-rose-50 dark:hover:bg-rose-950/25 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-150 dark:hover:border-rose-900/30 transition-all cursor-pointer active:scale-95 group shadow-sm"
+              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/50 dark:border-slate-750 text-slate-650 dark:text-slate-350 rounded-xl font-black text-xs hover:bg-rose-50 dark:hover:bg-rose-950/25 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-150 dark:hover:border-rose-900/30 transition-all cursor-pointer active:scale-95 group shadow-sm shrink-0"
             >
               <LogOut className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform text-slate-400 group-hover:text-rose-500" />
               <span className="hidden sm:inline">{t('nav.logout')}</span>

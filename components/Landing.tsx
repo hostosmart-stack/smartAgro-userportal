@@ -28,7 +28,6 @@ export const Landing: React.FC<LandingProps> = ({ onLoginClick }) => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isIOS, setIsIOS] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
-  const [showInstallModal, setShowInstallModal] = useState(false);
   
   const { t, language, setLanguage } = useLanguage();
 
@@ -81,10 +80,7 @@ export const Landing: React.FC<LandingProps> = ({ onLoginClick }) => {
         setDeferredPrompt(null);
       } catch (err) {
         console.error('Error in installation flow:', err);
-        setShowInstallModal(true);
       }
-    } else {
-      setShowInstallModal(true);
     }
   };
 
@@ -93,41 +89,41 @@ export const Landing: React.FC<LandingProps> = ({ onLoginClick }) => {
       
       {/* 1. Header & Navigation */}
       <div className="fixed top-4 left-4 right-4 z-50 max-w-7xl mx-auto shrink-0">
-        <nav className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-gray-150/20 dark:border-slate-800/80 rounded-2xl shadow-[0_10px_35px_rgba(0,0,0,0.03)] dark:shadow-[0_10px_35px_rgba(0,0,0,0.4)] py-3 px-4 sm:px-6 md:px-8 flex items-center justify-between transition-all duration-300">
-          <div className="flex items-center gap-2.5">
-            <div className="bg-gradient-to-tr from-farm-600 to-emerald-700 p-2 sm:p-2.5 rounded-xl sm:rounded-2xl shadow-sm">
-               <Leaf className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+        <nav className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-gray-150/20 dark:border-slate-800/80 rounded-2xl shadow-[0_10px_35px_rgba(0,0,0,0.03)] dark:shadow-[0_10px_35px_rgba(0,0,0,0.4)] py-2.5 px-3 sm:px-6 md:px-8 flex items-center justify-between transition-all duration-300 gap-2 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+            <div className="bg-gradient-to-tr from-farm-600 to-emerald-700 p-2 sm:p-2.5 rounded-xl sm:rounded-2xl shadow-sm shrink-0">
+               <Leaf className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-white" />
             </div>
-            <div className="flex flex-col">
-              <span className="text-base sm:text-lg font-black text-gray-950 tracking-tight leading-none">Smart Agro</span>
-              <span className="text-[8px] sm:text-[9px] font-bold text-farm-600 uppercase tracking-widest mt-0.5 sm:mt-1">
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm sm:text-lg font-black text-gray-950 tracking-tight leading-none truncate">Smart Agro</span>
+              <span className="text-[7px] sm:text-[9px] font-bold text-farm-600 uppercase tracking-widest mt-0.5 sm:mt-1 truncate max-w-[80px] xs:max-w-[150px] sm:max-w-none">
                 {language === 'fr' ? 'Gestion Agricole & Provenderie' : 'Feed Mill & Farm Management'}
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
             {!isInstalled && (
               <button
                 onClick={handleInstallClick}
-                className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-100 rounded-xl font-bold text-[10px] sm:text-xs uppercase tracking-wide transition-all shadow-sm cursor-pointer"
+                className="flex items-center gap-1 px-2 py-1.5 sm:px-3 sm:py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-100 rounded-xl font-bold text-[9px] sm:text-xs uppercase tracking-wide transition-all shadow-sm cursor-pointer shrink-0"
               >
                 <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="hidden sm:inline">{language === 'fr' ? 'Installer' : 'Install'}</span>
+                <span className="hidden xs:inline">{language === 'fr' ? 'Installer' : 'Install'}</span>
               </button>
             )}
 
             {/* Minimalist Language Switcher */}
-            <div className="flex items-center bg-gray-100 p-0.5 rounded-lg text-[9px] sm:text-[10px]">
+            <div className="flex items-center bg-gray-100 p-0.5 rounded-lg text-[9px] sm:text-[10px] shrink-0">
               <button 
                 onClick={() => setLanguage('fr')} 
-                className={`px-2 py-1 rounded font-black transition-all ${language === 'fr' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
+                className={`px-1.5 py-0.5 sm:px-2 sm:py-1 rounded font-black transition-all ${language === 'fr' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
               >
                 FR
               </button>
               <button 
                 onClick={() => setLanguage('en')} 
-                className={`px-2 py-1 rounded font-black transition-all ${language === 'en' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
+                className={`px-1.5 py-0.5 sm:px-2 sm:py-1 rounded font-black transition-all ${language === 'en' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
               >
                 EN
               </button>
@@ -135,7 +131,7 @@ export const Landing: React.FC<LandingProps> = ({ onLoginClick }) => {
 
             <button 
               onClick={onLoginClick}
-              className="px-3.5 sm:px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs uppercase tracking-wide transition-all shadow-sm cursor-pointer"
+              className="px-2.5 py-1.5 sm:px-5 sm:py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-[9px] sm:text-xs uppercase tracking-wide transition-all shadow-sm cursor-pointer shrink-0"
             >
               {language === 'fr' ? 'Système' : 'System Access'}
             </button>
@@ -522,119 +518,6 @@ export const Landing: React.FC<LandingProps> = ({ onLoginClick }) => {
         </div>
       )}
 
-      {/* 4. PWA Installation Helper Modal */}
-      {showInstallModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
-          <div className="bg-white text-slate-800 rounded-3xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden border border-white/20">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-slate-50/50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shadow-inner shrink-0">
-                  <Smartphone className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-black text-gray-950 tracking-tight">
-                    {language === 'fr' ? "Installer l'application" : "Install Application"}
-                  </h3>
-                  <p className="text-[9px] uppercase font-bold text-emerald-600 mt-0.5 tracking-widest">Smart Agro PWA</p>
-                </div>
-              </div>
-              <button onClick={() => setShowInstallModal(false)} className="p-1.5 hover:bg-gray-150 rounded-full transition-colors cursor-pointer">
-                <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed">
-                {language === 'fr'
-                  ? "Installez Smart Agro sur votre écran d'accueil pour y accéder en un clic et l'utiliser hors-ligne, comme une application mobile native !"
-                  : "Install Smart Agro on your home screen for instant one-click access and full offline capabilities, just like a native mobile app!"}
-              </p>
-
-              <div className="space-y-3 pt-2">
-                {isIOS ? (
-                  // iOS Instructions
-                  <div className="space-y-3">
-                    <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-100/60 flex gap-3 text-xs text-amber-800 font-semibold leading-normal">
-                      <span className="text-base leading-none">💡</span>
-                      <span>
-                        {language === 'fr' 
-                          ? "Safari sur iOS exige une installation manuelle. Suivez ces étapes simples :"
-                          : "Safari on iOS requires manual installation. Follow these simple steps:"}
-                      </span>
-                    </div>
-                    
-                    <div className="space-y-2.5">
-                      <div className="flex items-start gap-3 text-xs sm:text-sm text-slate-700">
-                        <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-600 mt-0.5 shrink-0">1</div>
-                        <p className="leading-tight">
-                          {language === 'fr' 
-                            ? "Appuyez sur le bouton de partage de votre navigateur Safari (l'icône carrée avec une flèche vers le haut en bas de votre écran)."
-                            : "Tap the Share button in Safari (the square icon with an upward arrow at the bottom of the screen)."}
-                        </p>
-                      </div>
-                      <div className="flex items-start gap-3 text-xs sm:text-sm text-slate-700">
-                        <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-600 mt-0.5 shrink-0">2</div>
-                        <p className="leading-tight">
-                          {language === 'fr'
-                            ? "Faites défiler le menu et appuyez sur « Sur l'écran d'accueil »."
-                            : "Scroll down and tap 'Add to Home Screen'."}
-                        </p>
-                      </div>
-                      <div className="flex items-start gap-3 text-xs sm:text-sm text-slate-700">
-                        <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-600 mt-0.5 shrink-0">3</div>
-                        <p className="leading-tight">
-                          {language === 'fr'
-                            ? "Appuyez sur « Ajouter » en haut à droite pour valider l'installation."
-                            : "Tap 'Add' in the top right corner to confirm."}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  // Android / Desktop / Standard instructions
-                  <div className="space-y-3">
-                    <div className="space-y-2.5">
-                      <div className="flex items-start gap-3 text-xs sm:text-sm text-slate-700">
-                        <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-600 mt-0.5 shrink-0">1</div>
-                        <p className="leading-tight">
-                          {language === 'fr'
-                            ? "Cliquez sur le bouton de menu du navigateur (souvent trois petits points verticaux ou une flèche d'installation dans la barre d'adresse)."
-                            : "Click or tap your browser's menu button (usually three vertical dots, or an install arrow in your URL bar)."}
-                        </p>
-                      </div>
-                      <div className="flex items-start gap-3 text-xs sm:text-sm text-slate-700">
-                        <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-600 mt-0.5 shrink-0">2</div>
-                        <p className="leading-tight">
-                          {language === 'fr'
-                            ? "Sélectionnez « Installer l'application » ou « Ajouter à l'écran d'accueil »."
-                            : "Select 'Install app' or 'Add to Home screen'."}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100 text-xs text-emerald-800 font-semibold flex items-center justify-center gap-2 leading-tight">
-                      <span>✨</span>
-                      <span>
-                        {language === 'fr'
-                          ? "L'application apparaîtra ensuite sur votre écran principal."
-                          : "The app will then appear on your main home screen."}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="p-4 bg-slate-50 border-t border-gray-100 flex justify-end">
-              <button 
-                onClick={() => setShowInstallModal(false)}
-                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs uppercase tracking-wider cursor-pointer"
-              >
-                {language === 'fr' ? "Fermer" : "Close"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
