@@ -316,22 +316,22 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
                  </select>
             </div>
 
-             <div className="bg-gray-100 p-1.5 rounded-xl flex h-12 dark:bg-gray-800 w-full sm:w-auto overflow-x-auto whitespace-nowrap scrollbar-hide shadow-inner">
+             <div className="bg-gray-100 p-2 rounded-2xl flex h-14 dark:bg-gray-800 w-full sm:w-auto overflow-x-auto whitespace-nowrap scrollbar-hide shadow-inner">
                 <button 
                     onClick={() => setActiveTab('expenses')}
-                    className={`h-full flex-1 sm:flex-none px-4 rounded-lg text-sm font-bold transition-all flex items-center justify-center ${activeTab === 'expenses' ? 'bg-white text-[var(--color-farm-700)] shadow-sm dark:bg-gray-700 dark:text-[var(--color-farm-400)]' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                    className={`h-full flex-1 sm:flex-none px-5 rounded-xl text-sm font-bold transition-all flex items-center justify-center ${activeTab === 'expenses' ? 'bg-white text-[var(--color-farm-700)] shadow-sm dark:bg-gray-700 dark:text-[var(--color-farm-400)]' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
                 >
                     Résultats
                 </button>
                 <button 
                     onClick={() => setActiveTab('debts')}
-                    className={`h-full flex-1 sm:flex-none px-4 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'debts' ? 'bg-white text-[var(--color-farm-700)] shadow-sm dark:bg-gray-700 dark:text-[var(--color-farm-400)]' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                    className={`h-full flex-1 sm:flex-none px-5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'debts' ? 'bg-white text-[var(--color-farm-700)] shadow-sm dark:bg-gray-700 dark:text-[var(--color-farm-400)]' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
                 >
                     Crédits <span className="bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-xs font-bold dark:bg-red-900/30 dark:text-red-400">{unpaidInvoices.length}</span>
                 </button>
                 <button 
                     onClick={() => setActiveTab('transfers')}
-                    className={`h-full flex-1 sm:flex-none px-4 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'transfers' ? 'bg-white text-[var(--color-farm-700)] shadow-sm dark:bg-gray-700 dark:text-[var(--color-farm-400)]' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                    className={`h-full flex-1 sm:flex-none px-5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'transfers' ? 'bg-white text-[var(--color-farm-700)] shadow-sm dark:bg-gray-700 dark:text-[var(--color-farm-400)]' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
                 >
                     Transferts <span className="bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full text-xs font-bold dark:bg-blue-900/30 dark:text-blue-400">{filteredTransfers.length}</span>
                 </button>

@@ -336,12 +336,12 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
            </h2>
            <p className="text-gray-500 text-sm mt-2 font-medium ml-1">Performances et valorisation de votre activité.</p>
         </div>
-           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto justify-center md:justify-end">
+            <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto justify-center md:justify-end mt-4 md:mt-0 px-2 sm:px-0">
              {canFilterBoutique && (
                  <div className="relative group w-full sm:w-auto">
-                     <Store className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 group-hover:text-farm-600 transition-colors" />
+                     <Store className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 group-hover:text-farm-600 transition-colors" />
                      <select 
-                         className="w-full pl-10 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none shadow-sm hover:border-farm-300 hover:shadow-md transition-all appearance-none cursor-pointer sm:min-w-[180px]"
+                         className="w-full h-12 pl-11 pr-10 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none shadow-sm hover:border-farm-300 hover:shadow-md focus:ring-2 focus:ring-farm-500/20 transition-all appearance-none cursor-pointer sm:min-w-[200px]"
                          value={boutiqueFilter}
                          onChange={e => setBoutiqueFilter(e.target.value)}
                      >
@@ -352,23 +352,23 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
                              <option key={b.id} value={b.id}>{b.name}</option>
                          ))}
                      </select>
-                     <ArrowDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-3 h-3 pointer-events-none" />
+                     <ArrowDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-3 h-3 pointer-events-none" />
                  </div>
              )}
 
 
 
             <div className="relative group w-full sm:w-auto">
-                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 group-hover:text-purple-600 transition-colors" />
+                <Filter className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 group-hover:text-purple-600 transition-colors" />
                 <select 
-                    className="w-full pl-10 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none shadow-sm hover:border-purple-300 hover:shadow-md transition-all appearance-none cursor-pointer sm:min-w-[180px]"
+                    className="w-full h-12 pl-11 pr-10 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none shadow-sm hover:border-purple-300 hover:shadow-md focus:ring-2 focus:ring-purple-500/20 transition-all appearance-none cursor-pointer sm:min-w-[200px]"
                     value={activeCategory}
                     onChange={(e) => setActiveCategory(e.target.value)}
                 >
                     <option value="Tous">Tous les rayons</option>
                     {(categories.length > 0 ? categories : Object.values(Category)).map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
-                <ArrowDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-3 h-3 pointer-events-none" />
+                <ArrowDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-3 h-3 pointer-events-none" />
             </div>
         </div>
       </div>
