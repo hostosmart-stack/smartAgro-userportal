@@ -39,7 +39,12 @@ export const Invoices: React.FC<InvoicesProps> = ({ invoices, products, onUpdate
     if (userBoutique && userBoutique !== 'Toutes') return userBoutique;
     return 'all';
   });
-  const canFilterBoutique = userRole === 'Admin' || (userRole === 'Gérant' && userBoutique === 'Toutes');
+  const normRole = (userRole || '').toLowerCase().trim();
+  const isSuperOrAdmin = normRole === 'admin' || 
+                         normRole.includes('super') || 
+                         normRole.includes('system') || 
+                         normRole.includes('administrateur');
+  const canFilterBoutique = isSuperOrAdmin || (userRole === 'Gérant' && userBoutique === 'Toutes');
   const [wholesaleFilter, setWholesaleFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
@@ -823,7 +828,7 @@ export const Invoices: React.FC<InvoicesProps> = ({ invoices, products, onUpdate
                           </div>
                       </div>
 
-                      {(userRole === 'Admin' || userPermissions.includes('invoices')) && (
+                      {(isSuperOrAdmin || userPermissions.includes('invoices')) && (
                           <button 
                               onClick={() => {
                                   if (isEditing) {
@@ -1208,7 +1213,7 @@ export const Invoices: React.FC<InvoicesProps> = ({ invoices, products, onUpdate
                               >
                                   <Printer className="w-4 h-4" /> Imprimer
                               </button>
-                              {(userRole === 'Admin' || userPermissions.includes('reports')) && (
+                              {(isSuperOrAdmin || userPermissions.includes('reports')) && (
                                   <button 
                                       onClick={() => setShowConfirmVoid(true)}
                                       className="px-8 py-4 bg-rose-50 text-rose-600 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-100 border border-rose-100 transition-all active:scale-95 flex items-center gap-3"

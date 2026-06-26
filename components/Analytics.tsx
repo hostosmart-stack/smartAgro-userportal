@@ -21,7 +21,12 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
     if (userBoutique && userBoutique !== 'Toutes') return userBoutique;
     return 'all';
   });
-  const canFilterBoutique = userRole === 'Admin' || (userRole === 'Gérant' && userBoutique === 'Toutes');
+  const normRole = (userRole || '').toLowerCase().trim();
+  const isSuperOrAdmin = normRole === 'admin' || 
+                         normRole.includes('super') || 
+                         normRole.includes('system') || 
+                         normRole.includes('administrateur');
+  const canFilterBoutique = isSuperOrAdmin || (userRole === 'Gérant' && userBoutique === 'Toutes');
 
   const mainBoutiqueId = boutiques[0]?.id || 'Boutique 1';
 

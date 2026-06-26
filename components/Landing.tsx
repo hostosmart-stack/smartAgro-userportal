@@ -37,13 +37,22 @@ export const Landing: React.FC<LandingProps> = ({ onLoginClick }) => {
     const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
     setIsIOS(isIosDevice);
 
+    if ((window as any).deferredPrompt) {
+      setDeferredPrompt((window as any).deferredPrompt);
+    }
+
     // Capture the beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
     };
 
+    const handleCustomEvent = (e: Event) => {
+      setDeferredPrompt((e as CustomEvent).detail);
+    };
+
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('deferredpromptavailable', handleCustomEvent);
 
     // Check if already in standalone mode
     if (
@@ -57,6 +66,7 @@ export const Landing: React.FC<LandingProps> = ({ onLoginClick }) => {
     const handleAppInstalled = () => {
       setIsInstalled(true);
       setDeferredPrompt(null);
+      (window as any).deferredPrompt = null;
       console.log('PWA installed successfully');
     };
 
@@ -64,20 +74,23 @@ export const Landing: React.FC<LandingProps> = ({ onLoginClick }) => {
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('deferredpromptavailable', handleCustomEvent);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
 
   const handleInstallClick = async () => {
-    if (deferredPrompt) {
+    const promptToUse = deferredPrompt || (window as any).deferredPrompt;
+    if (promptToUse) {
       try {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
+        promptToUse.prompt();
+        const { outcome } = await promptToUse.userChoice;
         console.log(`User installation decision: ${outcome}`);
         if (outcome === 'accepted') {
           setIsInstalled(true);
         }
         setDeferredPrompt(null);
+        (window as any).deferredPrompt = null;
       } catch (err) {
         console.error('Error in installation flow:', err);
       }

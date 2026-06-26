@@ -508,7 +508,7 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
            <p className="text-gray-500 mt-1 font-medium">{t('employees.subtitle')}</p>
         </div>
         <div className="flex gap-2">
-            {userRole === 'Admin' && (
+            {(userRole === 'Admin' || isSuperAdminUser) && (
                 <button 
                     onClick={() => setActiveTab(activeTab === 'employees' ? 'roles' : 'employees')}
                     className={`px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all font-bold text-sm border ${activeTab === 'roles' ? 'bg-farm-50 border-farm-200 text-farm-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}

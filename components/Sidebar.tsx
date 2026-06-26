@@ -24,6 +24,8 @@ interface SidebarProps {
   activeCategory: AppCategory;
   onExitCategory: () => void;
   onLogout?: () => void;
+  sidebarWidth?: number;
+  setSidebarWidth?: (width: number) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -43,7 +45,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onProvenderieChange,
   activeCategory,
   onExitCategory,
-  onLogout
+  onLogout,
+  sidebarWidth = 256,
+  setSidebarWidth
 }) => {
   const { language, setLanguage, t } = useLanguage();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -61,6 +65,64 @@ export const Sidebar: React.FC<SidebarProps> = ({
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  // Swipe to close on mobile
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartX(e.touches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartX === null) return;
+    const currentX = e.touches[0].clientX;
+    const diff = touchStartX - currentX;
+    
+    if (isMobile && isOpen && diff > 50 && onClose) {
+      onClose();
+      setTouchStartX(null);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setTouchStartX(null);
+  };
+
+  // Drag to resize on desktop
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = sidebarWidth;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      let newWidth = startWidth + deltaX;
+
+      if (newWidth < 140) {
+        if (!isCollapsed && onToggleCollapse) {
+          onToggleCollapse();
+        }
+      } else {
+        if (isCollapsed && onToggleCollapse) {
+          onToggleCollapse();
+        }
+        if (newWidth > 450) newWidth = 450;
+        if (newWidth < 200) newWidth = 200;
+        if (setSidebarWidth) {
+          setSidebarWidth(newWidth);
+          localStorage.setItem('smartAgro_sidebarWidth', String(newWidth));
+        }
+      }
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
 
   const menuItems = [
     { id: 'dashboard', label: t('nav.dashboard'), icon: LayoutDashboard, permission: 'dashboard', category: 'all' },
@@ -109,12 +171,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
         />
       )}
       
-      <div className={`fixed left-0 top-0 h-full ${isCollapsed && !isMobile ? 'w-20' : 'w-64'} bg-[#0E1116] text-white z-50 flex flex-col font-sans border-r border-slate-800/40 transition-transform duration-300 ${isMobile ? (isOpen ? 'translate-x-0' : '-translate-x-full') : 'translate-x-0'} shadow-[4px_0_24px_rgba(0,0,0,0.2)]`}>
+      <div 
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={isMobile ? undefined : { width: isCollapsed ? '80px' : `${sidebarWidth}px` }}
+        className={`fixed left-0 top-0 h-full bg-[#0E1116] text-white z-50 flex flex-col font-sans border-r border-slate-800/40 ${isMobile ? 'transition-transform duration-300' : ''} ${isMobile ? (isOpen ? 'translate-x-0' : '-translate-x-full') : 'translate-x-0'} shadow-[4px_0_24px_rgba(0,0,0,0.2)]`}
+      >
         {/* Background Subtle Gradient */}
         <div className="absolute top-0 left-0 w-full h-80 bg-gradient-to-b from-slate-900/60 to-transparent pointer-events-none"></div>
 
       {/* Header */}
-      <div className={`relative z-10 p-6 flex items-center ${isCollapsed ? 'justify-center' : 'gap-3.5'} border-b border-white/[0.04]`}>
+      <div 
+        onClick={isCollapsed && onToggleCollapse ? onToggleCollapse : undefined}
+        className={`relative z-10 p-6 flex items-center ${isCollapsed ? 'justify-center cursor-pointer hover:bg-white/[0.04] transition-colors' : 'gap-3.5'} border-b border-white/[0.04]`}
+        title={isCollapsed ? "Cliquez pour agrandir" : undefined}
+      >
         <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-rose-500 via-pink-500 to-amber-400 p-2.5 shadow-lg shadow-rose-500/20 border border-white/10 shrink-0 flex items-center justify-center font-display font-black text-white text-base">
            S
         </div>
@@ -130,10 +202,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {!isMobile && (
         <button 
           onClick={onToggleCollapse}
-          className="absolute -right-3 top-8 bg-slate-900 border border-white/10 text-white p-1 rounded-full shadow-lg z-20 hover:bg-slate-850 hover:border-slate-700 transition-colors"
+          className="absolute -right-3 top-8 bg-slate-900 border border-white/10 text-white p-1 rounded-full shadow-lg z-50 hover:bg-slate-850 hover:border-[#10B981] hover:text-[#10B981] transition-all cursor-pointer scale-100 hover:scale-110 active:scale-95 flex items-center justify-center"
+          title={isCollapsed ? "Agrandir la barre latérale" : "Réduire la barre latérale"}
         >
-          {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          {isCollapsed ? <ChevronRight className="w-4 h-4 text-[#10B981] animate-pulse" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
+      )}
+
+      {/* Resizable drag handle (desktop only) */}
+      {!isMobile && !isCollapsed && (
+        <div
+          onMouseDown={handleMouseDown}
+          className="absolute right-0 top-0 bottom-0 w-1.5 hover:w-2.5 cursor-col-resize hover:bg-[#10B981]/20 active:bg-[#10B981]/40 z-50 transition-all duration-150"
+          title="Faites glisser pour redimensionner"
+        />
       )}
 
       {/* Navigation */}

@@ -56,6 +56,10 @@ const InnerApp = () => {
   const [authLoading, setAuthLoading] = useState(true);
   const [showLogin, setShowLogin] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const saved = localStorage.getItem('smartAgro_sidebarWidth');
+    return saved ? parseInt(saved, 10) : 256;
+  });
   const [isMobile, setIsMobile] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
@@ -858,13 +862,20 @@ const InnerApp = () => {
             setCurrentView('dashboard');
           }}
           onLogout={handleLogout}
+          sidebarWidth={sidebarWidth}
+          setSidebarWidth={setSidebarWidth}
         />
       )}
-      <main className={`flex-1 transition-all duration-300 h-full overflow-hidden flex flex-col relative ${
-        isMobile 
-          ? `ml-0 px-4 pb-4 ${activeCategory ? 'pt-24' : 'pt-4'}` 
-          : `${!activeCategory ? 'ml-0' : (isSidebarCollapsed ? 'ml-20' : 'ml-64')} p-6`
-      }`}>
+      <main 
+        className={`flex-1 transition-all duration-300 h-full overflow-hidden flex flex-col relative ${
+          isMobile 
+            ? `ml-0 px-4 pb-4 ${activeCategory ? 'pt-24' : 'pt-4'}` 
+            : 'p-6'
+        }`}
+        style={isMobile ? undefined : {
+          marginLeft: !activeCategory ? '0px' : (isSidebarCollapsed ? '80px' : `${sidebarWidth}px`)
+        }}
+      >
         <div className="h-full max-w-[1600px] mx-auto flex flex-col w-full">
           {isLicenseEndingSoon && !dismissLicenseBanner && activeCategory && (
             <div className="mb-4 bg-gradient-to-r from-amber-500/15 to-orange-500/10 border border-amber-500/25 dark:border-amber-500/15 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-sm relative overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
