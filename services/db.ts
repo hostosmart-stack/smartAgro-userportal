@@ -273,10 +273,11 @@ export const deleteProvenderie = async (id: string) => {
 
 // --- CUSTOMERS ---
 
-export const subscribeToCustomers = (provenderieId: string, callback: (customers: Customer[]) => void) => {
-  if (!provenderieId) return () => {};
+export const subscribeToCustomers = (provenderieId: string, callback: (customers: Customer[]) => void, isSuperAdmin?: boolean) => {
   const path = 'customers';
-  const q = query(collection(db, path), where('provenderieId', '==', provenderieId));
+  const q = (isSuperAdmin || !provenderieId)
+    ? query(collection(db, path))
+    : query(collection(db, path), where('provenderieId', '==', provenderieId));
   const unsubscribe = onSnapshot(q, (snapshot) => {
     const customers = snapshot.docs.map(doc => doc.data() as Customer);
     callback(customers);
@@ -296,14 +297,11 @@ export const deleteCustomer = async (id: string) => {
 
 // --- PRODUCTS ---
 
-export const subscribeToProducts = (provenderieId: string, callback: (products: Product[]) => void) => {
-  if (!provenderieId) return () => {};
+export const subscribeToProducts = (provenderieId: string, callback: (products: Product[]) => void, isSuperAdmin?: boolean) => {
   const path = 'products';
-  // Use simple query to avoid index requirements
-  const q = query(
-    collection(db, path), 
-    where('provenderieId', '==', provenderieId)
-  );
+  const q = (isSuperAdmin || !provenderieId)
+    ? query(collection(db, path))
+    : query(collection(db, path), where('provenderieId', '==', provenderieId));
   const unsubscribe = onSnapshot(q, (snapshot) => {
     const products = snapshot.docs
       .map(doc => doc.data() as Product)
@@ -325,14 +323,11 @@ export const deleteProduct = async (id: string) => {
 
 // --- INVOICES ---
 
-export const subscribeToInvoices = (provenderieId: string, callback: (invoices: Invoice[]) => void) => {
-  if (!provenderieId) return () => {};
+export const subscribeToInvoices = (provenderieId: string, callback: (invoices: Invoice[]) => void, isSuperAdmin?: boolean) => {
   const path = 'invoices';
-  // Use simple query to avoid index requirements
-  const q = query(
-    collection(db, path), 
-    where('provenderieId', '==', provenderieId)
-  );
+  const q = (isSuperAdmin || !provenderieId)
+    ? query(collection(db, path))
+    : query(collection(db, path), where('provenderieId', '==', provenderieId));
   const unsubscribe = onSnapshot(q, (snapshot) => {
     const invoices = snapshot.docs
       .map(doc => doc.data() as Invoice)
@@ -355,14 +350,11 @@ export const deleteInvoice = async (id: string) => {
 
 // --- EXPENSES ---
 
-export const subscribeToExpenses = (provenderieId: string, callback: (expenses: Expense[]) => void) => {
-  if (!provenderieId) return () => {};
+export const subscribeToExpenses = (provenderieId: string, callback: (expenses: Expense[]) => void, isSuperAdmin?: boolean) => {
   const path = 'expenses';
-  // Use simple query to avoid index requirements
-  const q = query(
-    collection(db, path), 
-    where('provenderieId', '==', provenderieId)
-  );
+  const q = (isSuperAdmin || !provenderieId)
+    ? query(collection(db, path))
+    : query(collection(db, path), where('provenderieId', '==', provenderieId));
   const unsubscribe = onSnapshot(q, (snapshot) => {
     const expenses = snapshot.docs
       .map(doc => doc.data() as Expense)
@@ -385,14 +377,11 @@ export const deleteExpense = async (id: string) => {
 
 // --- EMPLOYEES ---
 
-export const subscribeToEmployees = (provenderieId: string, callback: (employees: Employee[]) => void) => {
-  if (!provenderieId) return () => {};
+export const subscribeToEmployees = (provenderieId: string, callback: (employees: Employee[]) => void, isSuperAdmin?: boolean) => {
   const path = 'employees';
-  // Use simple query to avoid index requirements
-  const q = query(
-    collection(db, path), 
-    where('provenderieId', '==', provenderieId)
-  );
+  const q = (isSuperAdmin || !provenderieId)
+    ? query(collection(db, path))
+    : query(collection(db, path), where('provenderieId', '==', provenderieId));
   const unsubscribe = onSnapshot(q, (snapshot) => {
     const employees = snapshot.docs
       .map(doc => doc.data() as Employee)
@@ -465,14 +454,11 @@ export const deleteRole = async (id: string) => {
 
 // --- BOUTIQUES ---
 
-export const subscribeToBoutiques = (provenderieId: string, callback: (boutiques: Boutique[]) => void) => {
-  if (!provenderieId) return () => {};
+export const subscribeToBoutiques = (provenderieId: string, callback: (boutiques: Boutique[]) => void, isSuperAdmin?: boolean) => {
   const path = 'boutiques';
-  // Use simple query to avoid index requirements
-  const q = query(
-    collection(db, path), 
-    where('provenderieId', '==', provenderieId)
-  );
+  const q = (isSuperAdmin || !provenderieId)
+    ? query(collection(db, path))
+    : query(collection(db, path), where('provenderieId', '==', provenderieId));
   const unsubscribe = onSnapshot(q, (snapshot) => {
     const boutiques = snapshot.docs
       .map(doc => doc.data() as Boutique)
@@ -667,14 +653,11 @@ export const voidSaleTransaction = (invoiceId: string, restoredProducts: Product
 
 // --- TRANSFERS ---
 
-export const subscribeToTransfers = (provenderieId: string, callback: (transfers: StockTransfer[]) => void) => {
-  if (!provenderieId) return () => {};
+export const subscribeToTransfers = (provenderieId: string, callback: (transfers: StockTransfer[]) => void, isSuperAdmin?: boolean) => {
   const path = 'transfers';
-  // Use simple query to avoid index requirements
-  const q = query(
-    collection(db, path), 
-    where('provenderieId', '==', provenderieId)
-  );
+  const q = (isSuperAdmin || !provenderieId)
+    ? query(collection(db, path))
+    : query(collection(db, path), where('provenderieId', '==', provenderieId));
   const unsubscribe = onSnapshot(q, (snapshot) => {
     const transfers = snapshot.docs
       .map(doc => doc.data() as StockTransfer)

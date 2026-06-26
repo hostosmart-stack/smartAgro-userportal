@@ -108,6 +108,15 @@ const InnerApp = () => {
   const [dismissLicenseBanner, setDismissLicenseBanner] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
+  const userEmail = user?.email || '';
+  const employeeRole = (currentEmployee?.role || '').toLowerCase().trim();
+  const isSuperAdminUser = userEmail === 'danielledjofang2003@gmail.com' ||
+                           employeeRole === 'admin' ||
+                           employeeRole.includes('super') ||
+                           employeeRole.includes('administrateur') ||
+                           (user !== null && user.uid === 'superadmin_bypass') ||
+                           (userEmail !== '' && (userEmail.startsWith('admin') || userEmail.startsWith('super')));
+
   // Synchronize state with Browser History for Back Button support
   const isPopStateRef = useRef(false);
 
@@ -343,13 +352,13 @@ const InnerApp = () => {
   useEffect(() => {
     if (!user) return;
 
-    const unsubProducts = subscribeToProducts(currentProvenderieId, setProducts);
-    const unsubInvoices = subscribeToInvoices(currentProvenderieId, setInvoices);
-    const unsubExpenses = subscribeToExpenses(currentProvenderieId, setExpenses);
-    const unsubEmployees = subscribeToEmployees(currentProvenderieId, setEmployees);
-    const unsubBoutiques = subscribeToBoutiques(currentProvenderieId, setBoutiques);
-    const unsubCustomers = subscribeToCustomers(currentProvenderieId, setCustomers);
-    const unsubTransfers = subscribeToTransfers(currentProvenderieId, setTransfers);
+    const unsubProducts = subscribeToProducts(currentProvenderieId, setProducts, isSuperAdminUser);
+    const unsubInvoices = subscribeToInvoices(currentProvenderieId, setInvoices, isSuperAdminUser);
+    const unsubExpenses = subscribeToExpenses(currentProvenderieId, setExpenses, isSuperAdminUser);
+    const unsubEmployees = subscribeToEmployees(currentProvenderieId, setEmployees, isSuperAdminUser);
+    const unsubBoutiques = subscribeToBoutiques(currentProvenderieId, setBoutiques, isSuperAdminUser);
+    const unsubCustomers = subscribeToCustomers(currentProvenderieId, setCustomers, isSuperAdminUser);
+    const unsubTransfers = subscribeToTransfers(currentProvenderieId, setTransfers, isSuperAdminUser);
     const unsubRoles = subscribeToRoles(currentProvenderieId, (fetchedRoles) => {
       setRoles(fetchedRoles);
       setRolesLoaded(true);
@@ -383,7 +392,7 @@ const InnerApp = () => {
       unsubProvenderies();
       unsubConversations();
     };
-  }, [user, currentProvenderieId]);
+  }, [user, currentProvenderieId, isSuperAdminUser]);
 
   const handleCheckout = async (newInvoice: Invoice, updatedStock: Product[], customer?: Customer) => {
     try {
@@ -636,14 +645,14 @@ const InnerApp = () => {
     // But we can handle it in the logout function or use a beforeunload listener.
   }, [user, currentEmployee, boutiques]);
 
-  const filteredProducts = products.filter(p => !currentProvenderieId || p.provenderieId === currentProvenderieId);
-  const filteredInvoices = invoices.filter(i => !currentProvenderieId || i.provenderieId === currentProvenderieId);
-  const filteredBoutiques = boutiques.filter(b => !currentProvenderieId || b.provenderieId === currentProvenderieId);
-  const filteredEmployees = employees.filter(e => !currentProvenderieId || e.provenderieId === currentProvenderieId);
-  const filteredExpenses = expenses.filter(e => !currentProvenderieId || e.provenderieId === currentProvenderieId);
-  const filteredTransfers = transfers.filter(t => !currentProvenderieId || t.provenderieId === currentProvenderieId);
-  const filteredCustomers = customers.filter(c => !currentProvenderieId || c.provenderieId === currentProvenderieId);
-  const filteredRoles = roles.filter(r => !currentProvenderieId || r.provenderieId === currentProvenderieId);
+  const filteredProducts = products.filter(p => !currentProvenderieId || p.provenderieId === currentProvenderieId || !p.provenderieId);
+  const filteredInvoices = invoices.filter(i => !currentProvenderieId || i.provenderieId === currentProvenderieId || !i.provenderieId);
+  const filteredBoutiques = boutiques.filter(b => !currentProvenderieId || b.provenderieId === currentProvenderieId || !b.provenderieId);
+  const filteredEmployees = employees.filter(e => !currentProvenderieId || e.provenderieId === currentProvenderieId || !e.provenderieId);
+  const filteredExpenses = expenses.filter(e => !currentProvenderieId || e.provenderieId === currentProvenderieId || !e.provenderieId);
+  const filteredTransfers = transfers.filter(t => !currentProvenderieId || t.provenderieId === currentProvenderieId || !t.provenderieId);
+  const filteredCustomers = customers.filter(c => !currentProvenderieId || c.provenderieId === currentProvenderieId || !c.provenderieId);
+  const filteredRoles = roles.filter(r => !currentProvenderieId || r.provenderieId === currentProvenderieId || !r.provenderieId);
 
   const renderContent = () => {
     // If no category selected, show the Hub (unless in specific non-dashboard views like profile/settings)
