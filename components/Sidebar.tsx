@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import { LayoutDashboard, ShoppingCart, Package, FileText, Bot, Settings, BarChart3, Calculator, LogOut, Leaf, Wifi, WifiOff, Users, Store, BookOpen, ChevronLeft, ChevronRight, User, ArrowRightLeft, ArrowLeft, Download } from 'lucide-react';
 import { auth, signOut } from '../services/firebase';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -167,17 +168,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Mobile Overlay */}
       {isMobile && isOpen && (
         <div 
-          className="fixed inset-0 bg-black/60 z-40 transition-opacity"
+          className="fixed inset-0 bg-black/60 z-[65] transition-opacity"
           onClick={onClose}
         />
       )}
       
-      <div 
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        style={isMobile ? undefined : { width: isCollapsed ? '80px' : `${sidebarWidth}px` }}
-        className={`fixed left-0 top-0 h-full bg-[#0E1116] text-white z-50 flex flex-col font-sans border-r border-slate-800/40 ${isMobile ? 'transition-transform duration-300' : ''} ${isMobile ? (isOpen ? 'translate-x-0' : '-translate-x-full') : 'translate-x-0'} shadow-[4px_0_24px_rgba(0,0,0,0.2)]`}
+      <motion.div 
+        drag={isMobile ? "x" : false}
+        dragDirectionLock
+        dragConstraints={{ left: -280, right: 0 }}
+        dragElastic={0.05}
+        onDragEnd={(event, info) => {
+          if (info.offset.x < -60 && onClose) {
+            onClose();
+          }
+        }}
+        animate={isMobile ? { x: isOpen ? 0 : -280 } : { x: 0 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+        style={isMobile ? { width: '280px' } : { width: isCollapsed ? '80px' : `${sidebarWidth}px` }}
+        className={`fixed left-0 top-0 h-full bg-[#0E1116] text-white z-[70] flex flex-col font-sans border-r border-slate-800/40 shadow-[4px_0_24px_rgba(0,0,0,0.2)]`}
       >
         {/* Background Subtle Gradient */}
         <div className="absolute top-0 left-0 w-full h-80 bg-gradient-to-b from-slate-900/60 to-transparent pointer-events-none"></div>
@@ -185,7 +194,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Header */}
       <div 
         onClick={isCollapsed && onToggleCollapse ? onToggleCollapse : undefined}
-        className={`relative z-10 p-6 flex items-center ${isCollapsed ? 'justify-center cursor-pointer hover:bg-white/[0.04] transition-colors' : 'gap-3.5'} border-b border-white/[0.04]`}
+        className={`relative z-10 p-6 ${isMobile ? 'pl-[76px]' : ''} flex items-center ${isCollapsed ? 'justify-center cursor-pointer hover:bg-white/[0.04] transition-colors' : 'gap-3.5'} border-b border-white/[0.04]`}
         title={isCollapsed ? "Cliquez pour agrandir" : undefined}
       >
         <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-rose-500 via-pink-500 to-amber-400 p-2.5 shadow-lg shadow-rose-500/20 border border-white/10 shrink-0 flex items-center justify-center font-display font-black text-white text-base">
@@ -340,7 +349,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <LogOut className="w-4 h-4 shrink-0" /> {!isCollapsed && <span>{t('nav.logout')}</span>}
         </button>
       </div>
-    </div>
+    </motion.div>
 
     <PWAInstallModal 
       isOpen={showInstructions} 

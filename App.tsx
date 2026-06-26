@@ -799,13 +799,23 @@ const InnerApp = () => {
             <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent"></div>
             
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              <button 
-                onClick={() => setMobileSidebarOpen(true)}
-                className="p-2.5 bg-white/[0.06] hover:bg-white/15 rounded-xl transition-all active:scale-95 border border-white/[0.04] flex items-center justify-center cursor-pointer shrink-0"
-                aria-label="Open menu"
-              >
-                <Menu className="w-5 h-5 text-slate-100" />
-              </button>
+              {mobileSidebarOpen ? (
+                <button 
+                  onClick={() => setMobileSidebarOpen(false)}
+                  className="fixed top-[27px] left-[32px] z-[80] p-2.5 bg-[#121824]/60 backdrop-blur-md hover:bg-slate-800 rounded-xl transition-all active:scale-95 border border-white/10 flex items-center justify-center cursor-pointer"
+                  aria-label="Close menu"
+                >
+                  <X className="w-5 h-5 text-slate-100 animate-in spin-in-180 duration-300" />
+                </button>
+              ) : (
+                <button 
+                  onClick={() => setMobileSidebarOpen(true)}
+                  className="p-2.5 bg-white/[0.06] hover:bg-white/15 rounded-xl transition-all active:scale-95 border border-white/[0.04] flex items-center justify-center cursor-pointer shrink-0"
+                  aria-label="Open menu"
+                >
+                  <Menu className="w-5 h-5 text-slate-100" />
+                </button>
+              )}
               
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-2 rounded-xl shadow-[0_2px_10px_rgba(16,185,129,0.2)] shrink-0">

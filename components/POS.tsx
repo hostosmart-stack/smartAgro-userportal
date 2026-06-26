@@ -779,28 +779,28 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
 
       {/* Cart Area */}
       <div className={`w-full lg:w-[450px] lg:h-full bg-white dark:bg-[#121824] rounded-[2.5rem] border border-slate-200/85 dark:border-slate-800/80 flex flex-col min-h-[400px] lg:min-h-0 shrink-0 lg:shrink relative z-20 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.03)] dark:shadow-none ${mobileTab === 'products' ? 'hidden lg:flex' : 'flex'}`}>
-         <div className="p-5 bg-slate-900 dark:bg-slate-950 text-white shrink-0 relative z-30 border-b border-slate-800/60 shadow-lg">
-             <div className="flex justify-between items-center mb-4">
-                 <div className="flex items-center gap-1 bg-white/10 p-1 rounded-xl border border-white/10">
+         <div className="p-4 sm:p-5 bg-slate-900 dark:bg-slate-950 text-white shrink-0 relative z-30 border-b border-slate-800/60 shadow-lg">
+             <div className="flex flex-wrap xs:flex-nowrap gap-2 justify-between items-center mb-4">
+                 <div className="flex items-center gap-0.5 xs:gap-1 bg-white/10 p-0.5 xs:p-1 rounded-xl border border-white/10">
                     <button 
                         onClick={() => { setSelectedCustomer(null); setCustomerName('Client Comptoir'); setIsRegisteredMode(false); }}
-                        className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${!isRegisteredMode && !selectedCustomer ? 'bg-white text-slate-900 shadow-md' : 'text-white/60 hover:text-white'}`}
+                        className={`px-1.5 xs:px-3 py-1 xs:py-1.5 rounded-lg text-[8px] xs:text-[9px] font-black uppercase tracking-wider transition-all ${!isRegisteredMode && !selectedCustomer ? 'bg-white text-slate-900 shadow-md' : 'text-white/60 hover:text-white'} cursor-pointer`}
                     >
                         Comptoir
                     </button>
                     <button 
                         onClick={() => { setIsRegisteredMode(true); setIsSearchFocused(true); }}
-                        className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${isRegisteredMode || selectedCustomer ? 'bg-farm-500 text-white shadow-md' : 'text-white/60 hover:text-white'}`}
+                        className={`px-1.5 xs:px-3 py-1 xs:py-1.5 rounded-lg text-[8px] xs:text-[9px] font-black uppercase tracking-wider transition-all ${isRegisteredMode || selectedCustomer ? 'bg-farm-500 text-white shadow-md' : 'text-white/60 hover:text-white'} cursor-pointer`}
                     >
                         Enregistré
                     </button>
                  </div>
-                 <div className="flex items-center gap-3">
+                 <div className="flex items-center gap-1.5 xs:gap-3">
                     <label className="flex items-center gap-1.5 cursor-pointer group">
                         <input type="checkbox" checked={isWholesale} onChange={e => setIsWholesale(e.target.checked)} className="w-3.5 h-3.5 rounded-md border-white/20 bg-white/10 text-farm-500 focus:ring-0 focus:ring-offset-0 transition-colors" />
-                        <span className="text-[9px] font-black uppercase tracking-widest text-white/60 group-hover:text-white transition-colors">Gros</span>
+                        <span className="text-[8px] xs:text-[9px] font-black uppercase tracking-wider text-white/60 group-hover:text-white transition-colors">Gros</span>
                     </label>
-                    <span className="bg-white/10 px-2.5 py-1 rounded-lg text-[9px] font-black tracking-wider uppercase text-white/80">{cart.length} Art.</span>
+                    <span className="bg-white/10 px-1.5 xs:px-2.5 py-0.5 xs:py-1 rounded-lg text-[8px] xs:text-[9px] font-black tracking-wider uppercase text-white/80">{cart.length} Art.</span>
                  </div>
              </div>
 
