@@ -326,22 +326,22 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
     <div className="space-y-8 animate-in fade-in duration-500 overflow-y-auto h-full pb-20 scrollbar-hide">
       
       {/* --- HEADER --- */}
-      <div className="flex flex-col md:flex-row justify-between md:items-end gap-6 border-b border-gray-100 pb-6 bg-white/50 backdrop-blur-sm sticky top-0 z-20 -mx-6 px-6 pt-4 items-center text-center md:items-start md:text-left">
+      <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 border-b border-gray-100 pb-3 bg-white/50 backdrop-blur-sm sticky top-0 z-20 -mx-6 px-6 pt-2 items-center text-center md:items-start md:text-left">
         <div className="flex flex-col items-center md:items-start">
-           <h2 className="text-3xl font-display font-bold text-gray-900 tracking-tight flex items-center justify-center md:justify-start gap-3">
-               <div className="p-2 bg-blue-50 rounded-xl">
-                   <BarChart3 className="w-8 h-8 text-blue-600" />
+           <h2 className="text-2xl font-display font-bold text-gray-900 tracking-tight flex items-center justify-center md:justify-start gap-2.5">
+               <div className="p-1.5 bg-blue-50 rounded-lg">
+                   <BarChart3 className="w-6 h-6 text-blue-600" />
                </div>
                Analyses
            </h2>
-           <p className="text-gray-500 text-sm mt-2 font-medium ml-1">Performances et valorisation de votre activité.</p>
+           <p className="text-gray-500 text-xs mt-0.5 font-medium ml-1">Performances et valorisation de votre activité.</p>
         </div>
-            <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto justify-center md:justify-end mt-4 md:mt-0 px-2 sm:px-0">
+            <div className="flex flex-row flex-wrap gap-3 w-full md:w-auto justify-center mt-4 md:mt-0 px-2 sm:px-0">
              {canFilterBoutique && (
                  <div className="relative group w-full sm:w-auto">
                      <Store className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 group-hover:text-farm-600 transition-colors" />
                      <select 
-                         className="w-full h-12 pl-11 pr-10 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none shadow-sm hover:border-farm-300 hover:shadow-md focus:ring-2 focus:ring-farm-500/20 transition-all appearance-none cursor-pointer sm:min-w-[200px]"
+                         className="w-full h-12 pl-11 pr-10 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none shadow-sm hover:border-farm-300 hover:shadow-md focus:ring-2 focus:ring-farm-500/20 transition-all appearance-none cursor-pointer sm:min-w-[160px]"
                          value={boutiqueFilter}
                          onChange={e => setBoutiqueFilter(e.target.value)}
                      >
@@ -361,7 +361,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
             <div className="relative group w-full sm:w-auto">
                 <Filter className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 group-hover:text-purple-600 transition-colors" />
                 <select 
-                    className="w-full h-12 pl-11 pr-10 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none shadow-sm hover:border-purple-300 hover:shadow-md focus:ring-2 focus:ring-purple-500/20 transition-all appearance-none cursor-pointer sm:min-w-[200px]"
+                    className="w-full h-12 pl-11 pr-10 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 outline-none shadow-sm hover:border-purple-300 hover:shadow-md focus:ring-2 focus:ring-purple-500/20 transition-all appearance-none cursor-pointer sm:min-w-[160px]"
                     value={activeCategory}
                     onChange={(e) => setActiveCategory(e.target.value)}
                 >
