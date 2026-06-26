@@ -13,10 +13,17 @@ export const usePWAInstall = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(
     (window as any).deferredPrompt || null
   );
-  const [isInstallable, setIsInstallable] = useState(!!(window as any).deferredPrompt);
+  const [isInstallable, setIsInstallable] = useState(true); // Always let the user click to see option
   const [isInstalled, setIsInstalled] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
+    // Check if device is iOS
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
+    setIsIOS(isIosDevice);
+
     if ((window as any).deferredPrompt) {
       setDeferredPrompt((window as any).deferredPrompt);
       setIsInstallable(true);
@@ -45,7 +52,10 @@ export const usePWAInstall = () => {
     window.addEventListener('deferredpromptavailable', handleCustomEvent);
     window.addEventListener('appinstalled', handleAppInstalled);
 
-    if (window.matchMedia('(display-mode: standalone)').matches) {
+    if (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true
+    ) {
       setIsInstalled(true);
     }
 
@@ -58,15 +68,23 @@ export const usePWAInstall = () => {
 
   const installPWA = async () => {
     const promptToUse = deferredPrompt || (window as any).deferredPrompt;
-    if (!promptToUse) return;
-    promptToUse.prompt();
-    const { outcome } = await promptToUse.userChoice;
-    if (outcome === 'accepted') {
-      setIsInstallable(false);
+    if (!promptToUse) {
+      setShowInstructions(true);
+      return;
     }
-    setDeferredPrompt(null);
-    (window as any).deferredPrompt = null;
+    try {
+      promptToUse.prompt();
+      const { outcome } = await promptToUse.userChoice;
+      if (outcome === 'accepted') {
+        setIsInstallable(false);
+      }
+      setDeferredPrompt(null);
+      (window as any).deferredPrompt = null;
+    } catch (err) {
+      console.error('Error in installation flow:', err);
+      setShowInstructions(true);
+    }
   };
 
-  return { isInstallable, isInstalled, installPWA };
+  return { isInstallable, isInstalled, installPWA, showInstructions, setShowInstructions, isIOS };
 };

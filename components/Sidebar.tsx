@@ -5,6 +5,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { Provenderie } from '../types';
 import { AppCategory } from './Hub';
 import { usePWAInstall } from '../hooks/usePWAInstall';
+import { PWAInstallModal } from './PWAInstallModal';
 
 interface SidebarProps {
   currentView: string;
@@ -51,7 +52,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { language, setLanguage, t } = useLanguage();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const { isInstallable, installPWA } = usePWAInstall();
+  const { isInstallable, isInstalled, installPWA, showInstructions, setShowInstructions, isIOS } = usePWAInstall();
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -321,11 +322,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
-        {isInstallable && (
+        {!isInstalled && (
           <button 
             onClick={installPWA}
             title={isCollapsed ? t('nav.install_app') : undefined}
-            className={`w-full flex items-center justify-center gap-2 py-3 mb-2.5 rounded-xl bg-white/[0.02] text-slate-300 hover:bg-white/[0.07] hover:text-white transition-all text-xs font-bold uppercase tracking-wider border border-white/5`}
+            className={`w-full flex items-center justify-center gap-2 py-3 mb-2.5 rounded-xl bg-white/[0.02] text-slate-300 hover:bg-white/[0.07] hover:text-white transition-all text-xs font-bold uppercase tracking-wider border border-white/5 cursor-pointer`}
           >
             <Download className="w-4 h-4 shrink-0" /> {!isCollapsed && <span>{t('nav.install_app')}</span>}
           </button>
@@ -334,12 +335,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button 
           onClick={onLogout || (() => signOut(auth))}
           title={isCollapsed ? t('nav.logout') : undefined}
-          className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white transition-all text-xs font-bold uppercase tracking-wider border border-rose-500/20 hover:border-rose-500`}
+          className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white transition-all text-xs font-bold uppercase tracking-wider border border-rose-500/20 hover:border-rose-500 cursor-pointer`}
         >
           <LogOut className="w-4 h-4 shrink-0" /> {!isCollapsed && <span>{t('nav.logout')}</span>}
         </button>
       </div>
     </div>
+
+    <PWAInstallModal 
+      isOpen={showInstructions} 
+      onClose={() => setShowInstructions(false)} 
+      isIOS={isIOS} 
+    />
     </>
   );
 };

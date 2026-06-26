@@ -18,6 +18,7 @@ import {
   Users
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { PWAInstallModal } from './PWAInstallModal';
 
 interface LandingProps {
   onLoginClick: () => void;
@@ -28,6 +29,7 @@ export const Landing: React.FC<LandingProps> = ({ onLoginClick }) => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isIOS, setIsIOS] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
   
   const { t, language, setLanguage } = useLanguage();
 
@@ -93,7 +95,10 @@ export const Landing: React.FC<LandingProps> = ({ onLoginClick }) => {
         (window as any).deferredPrompt = null;
       } catch (err) {
         console.error('Error in installation flow:', err);
+        setShowInstructions(true);
       }
+    } else {
+      setShowInstructions(true);
     }
   };
 
@@ -530,6 +535,12 @@ export const Landing: React.FC<LandingProps> = ({ onLoginClick }) => {
             </div>
         </div>
       )}
+
+      <PWAInstallModal 
+        isOpen={showInstructions} 
+        onClose={() => setShowInstructions(false)} 
+        isIOS={isIOS} 
+      />
 
     </div>
   );
