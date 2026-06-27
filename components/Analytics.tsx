@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Product, Invoice, Category, Boutique } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, DollarSign, Package, AlertCircle, ArrowUp, ArrowDown, Wallet, Info, Filter, PieChart as PieIcon, Calendar, Lightbulb, BarChart3, Store } from 'lucide-react';
+import { TrendingUp, DollarSign, Package, AlertCircle, ArrowUp, ArrowDown, Wallet, Info, Filter, PieChart as PieIcon, Calendar, Lightbulb, BarChart3, Store, FileText } from 'lucide-react';
 
 interface AnalyticsProps {
   products: Product[];
@@ -15,6 +15,7 @@ interface AnalyticsProps {
 type TimeRange = 'today' | 'week' | 'month' | 'year' | 'all';
 
 export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiques = [], userRole = 'Admin', userBoutique = 'Toutes', categories = [] }) => {
+  const [activeTab, setActiveTab] = useState<'overview' | 'inventory'>('overview');
   const [activeCategory, setActiveCategory] = useState<string>('Tous');
   const [timeRange, setTimeRange] = useState<TimeRange>('all');
   const [boutiqueFilter, setBoutiqueFilter] = useState<string>(() => {
@@ -335,6 +336,21 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
                Analyses
            </h2>
            <p className="text-gray-500 text-xs mt-0.5 font-medium ml-1">Performances et valorisation de votre activité.</p>
+           
+           <div className="mt-4 flex gap-2">
+              <button
+                  onClick={() => setActiveTab('overview')}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${activeTab === 'overview' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+              >
+                  Vue Générale
+              </button>
+              <button
+                  onClick={() => setActiveTab('inventory')}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${activeTab === 'inventory' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+              >
+                  Résumé Inventaire
+              </button>
+           </div>
         </div>
             <div className="flex flex-row flex-wrap gap-3 w-full md:w-auto justify-center mt-4 md:mt-0 px-2 sm:px-0">
              {canFilterBoutique && (
@@ -373,6 +389,8 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
         </div>
       </div>
 
+      {activeTab === 'overview' && (
+      <div className="w-full">
       {/* --- KPI CARDS (Minimalist) --- */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <KpiCard 
@@ -668,20 +686,99 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
               </div>
            </div>
       </div>
-
-      {/* --- LIGHTWEIGHT ADVICE CARD --- */}
-      <div className="bg-gradient-to-r from-farm-50 to-white rounded-3xl border border-farm-100 p-8 flex items-start gap-6 shadow-sm hover:shadow-md transition-all duration-300">
-         <div className="bg-white p-3 rounded-2xl shadow-sm border border-farm-100 shrink-0">
-            <Lightbulb className="w-6 h-6 text-farm-500" />
-         </div>
-         <div>
-            <h4 className="font-bold text-gray-900 text-lg font-display mb-2">Conseil Stratégique</h4>
-            <p className="text-gray-600 leading-relaxed max-w-4xl">
-               Vos produits à forte marge (ex: <span className="font-bold text-farm-700 bg-farm-50 px-1.5 py-0.5 rounded-md border border-farm-100">{chartData[0] ? (chartData[0].variantName ? `${chartData[0].name} (${chartData[0].variantName})` : chartData[0].name) : ''}</span>) génèrent le plus de profit. 
-               Assurez-vous qu'ils soient toujours en stock pour maximiser vos revenus. Surveillez également les produits à faible rotation pour optimiser votre trésorerie.
-            </p>
-         </div>
       </div>
+      )}
+
+      {activeTab === 'inventory' && (
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h3 className="text-lg font-bold text-gray-900 font-display flex items-center gap-2">
+                        <Package className="w-5 h-5 text-farm-500" />
+                        Inventaire Global
+                    </h3>
+                    <p className="text-sm text-gray-500">Résumé du stock avec totaux par catégorie</p>
+                </div>
+                <button 
+                    onClick={() => window.print()}
+                    className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shadow-md"
+                >
+                    <FileText className="w-4 h-4" />
+                    Exporter (PDF/Print)
+                </button>
+            </div>
+            
+            <div className="overflow-x-auto print:overflow-visible rounded-2xl border border-gray-100 shadow-inner bg-gray-50/50">
+                <table className="w-full text-sm text-left min-w-[700px]">
+                    <thead className="bg-white text-gray-500 uppercase text-[10px] font-bold tracking-widest border-b border-gray-200">
+                        <tr>
+                            <th className="px-6 py-4">Produit</th>
+                            <th className="px-6 py-4">Catégorie</th>
+                            <th className="px-6 py-4 text-right">Quantité En Stock</th>
+                            <th className="px-6 py-4 text-right">Prix Unitaire (Achat)</th>
+                            <th className="px-6 py-4 text-right">Valeur Totale</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 bg-white">
+                        {(() => {
+                            // Group products by category
+                            const grouped: Record<string, { items: any[], catTotal: number }> = {};
+                            let grandTotal = 0;
+                            
+                            filteredProducts.forEach(p => {
+                                const cat = p.category || 'Autres';
+                                if (!grouped[cat]) grouped[cat] = { items: [], catTotal: 0 };
+                                
+                                const stock = isSuperOrAdmin && boutiqueFilter === 'all' 
+                                    ? ((p.stock || 0) + Object.values(p.boutiqueStock || {}).reduce((a, b) => a + b, 0))
+                                    : (boutiqueFilter === 'all' ? (p.stock || 0) : (p.boutiqueStock?.[boutiqueFilter] || 0));
+                                
+                                const cost = p.costPrice || 0;
+                                const value = stock * cost;
+                                
+                                if (stock > 0) {
+                                    grouped[cat].items.push({ name: p.name, stock, cost, value });
+                                    grouped[cat].catTotal += value;
+                                    grandTotal += value;
+                                }
+                            });
+                            
+                            return (
+                                <>
+                                    {Object.entries(grouped).map(([cat, data], idx) => (
+                                        <React.Fragment key={idx}>
+                                            <tr className="bg-slate-50 border-b border-slate-100">
+                                                <td colSpan={5} className="px-6 py-3 font-black text-slate-700 text-xs uppercase tracking-widest bg-slate-100/50">
+                                                    {cat}
+                                                </td>
+                                            </tr>
+                                            {data.items.map((item, i) => (
+                                                <tr key={i} className="hover:bg-slate-50 transition-colors group">
+                                                    <td className="px-6 py-3 font-bold text-slate-800">{item.name}</td>
+                                                    <td className="px-6 py-3 text-slate-500 text-xs font-medium">{cat}</td>
+                                                    <td className="px-6 py-3 text-right font-mono font-bold text-slate-700 group-hover:text-blue-600 transition-colors">{item.stock}</td>
+                                                    <td className="px-6 py-3 text-right font-mono text-slate-500">{formatCurrency(item.cost)}</td>
+                                                    <td className="px-6 py-3 text-right font-mono font-bold text-emerald-600">{formatCurrency(item.value)}</td>
+                                                </tr>
+                                            ))}
+                                            <tr className="bg-farm-50 border-t border-farm-100">
+                                                <td colSpan={4} className="px-6 py-3 text-right font-black text-farm-800 text-xs uppercase tracking-wider">Sous-total {cat}</td>
+                                                <td className="px-6 py-3 text-right font-black font-mono text-farm-700 bg-farm-100/50">{formatCurrency(data.catTotal)}</td>
+                                            </tr>
+                                        </React.Fragment>
+                                    ))}
+                                    <tr className="bg-slate-900 text-white shadow-lg">
+                                        <td colSpan={4} className="px-6 py-5 text-right font-black uppercase tracking-widest text-sm text-slate-300">Valeur Totale Globale</td>
+                                        <td className="px-6 py-5 text-right font-black font-mono text-xl text-emerald-400">{formatCurrency(grandTotal)}</td>
+                                    </tr>
+                                </>
+                            );
+                        })()}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+      )}
 
     </div>
   );

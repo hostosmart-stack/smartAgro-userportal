@@ -689,7 +689,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
             {isVisible('kpi-sales') && (
               <div 
                 id="admin-kpi-sales"
-                onClick={() => onNavigate('analytics')}
+                onClick={() => {
+                  onNavigate('accounting');
+                }}
                 className="lg:col-span-5 rounded-[2.5rem] bg-gradient-to-br from-farm-500 via-farm-400 to-farm-300 p-8 text-white shadow-[0_20px_40px_-10px_var(--color-farm-500)] hover:-translate-y-1 hover:shadow-[0_24px_50px_var(--color-farm-500)] transition-all duration-300 relative overflow-hidden flex flex-col justify-between cursor-pointer group min-h-[220px]"
               >
                 <div className="absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity pointer-events-none flex items-end">
@@ -731,7 +733,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
             {isVisible('kpi-orders') && (
               <div 
                 id="admin-kpi-orders"
-                className="lg:col-span-4 bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-white/80 dark:border-slate-800/80 shadow-[0_8px_30px_rgba(0,0,0,0.02)] flex flex-col justify-between relative overflow-hidden min-h-[220px]"
+                onClick={() => onNavigate('inventory')}
+                className="lg:col-span-4 bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-white/80 dark:border-slate-800/80 shadow-[0_8px_30px_rgba(0,0,0,0.02)] flex flex-col justify-between relative overflow-hidden min-h-[220px] cursor-pointer"
               >
                  <div className="flex justify-between items-center mb-4">
                    <div>
@@ -816,7 +819,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                {isVisible('kpi-debt') && (
                   <div 
                     id="admin-sub-debts"
-                    onClick={() => onNavigate('pos')}
+                    onClick={() => {
+                      localStorage.setItem('smartAgro_initialAccountingTab', 'debts');
+                      onNavigate('accounting');
+                    }}
                     className={`bg-white dark:bg-slate-900 rounded-3xl p-5 border ${totalDebts > 0 ? 'border-rose-100 dark:border-rose-950 ring-4 ring-rose-50/50' : 'border-white'} shadow-sm flex items-center justify-between hover:translate-x-0.5 transition-all cursor-pointer flex-1`}
                   >
                      <div className="space-y-1">

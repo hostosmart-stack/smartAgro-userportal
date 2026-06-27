@@ -108,6 +108,8 @@ const InnerApp = () => {
   const [dismissLicenseBanner, setDismissLicenseBanner] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
+  const currentProvenderie = provenderies.find(p => p.id === currentProvenderieId);
+
   const userEmail = user?.email || '';
   const employeeRole = (currentEmployee?.role || '').toLowerCase().trim();
   const isSuperAdminUser = userEmail === 'danielledjofang2003@gmail.com' ||
@@ -164,7 +166,7 @@ const InnerApp = () => {
   }, [currentView, activeCategory, user]);
 
   const categories = useMemo(() => {
-    return settings.customCategories || [
+    return currentProvenderie?.categories || settings.customCategories || [
       'Matières Premières',
       'Volailles & Aliments Complets',
       'Bétail (Porcs/Bovins)',
@@ -172,7 +174,10 @@ const InnerApp = () => {
       'Santé Animale',
       'Divers'
     ];
-  }, [settings.customCategories]);
+  }, [settings.customCategories, currentProvenderie]);
+
+  // Sync settings with current provenderie name
+  const companyName = currentProvenderie?.name || settings.companyName;
   
   const { notify } = useNotifications();
 
@@ -542,7 +547,6 @@ const InnerApp = () => {
 
   const userPermissions = getUserPermissions(userRoleObj) as any[];
   const userBoutique = currentEmployee?.assignedBoutique || 'Toutes';
-  const currentProvenderie = provenderies.find(p => p.id === currentProvenderieId);
 
   const handleLogout = async () => {
     if (user && currentEmployee) {
@@ -728,10 +732,10 @@ const InnerApp = () => {
       case 'dashboard': return <Dashboard products={filteredProducts} invoices={filteredInvoices} boutiques={filteredBoutiques} transfers={filteredTransfers} expenses={filteredExpenses} onNavigate={setCurrentView} userRole={userRole} userBoutique={userBoutique} userRoleObj={userRoleObj} userName={currentEmployee?.name || 'Administrateur'} userEmail={currentEmployee?.email || ''} parentActiveCategory={activeCategory} categories={categories} />;
       case 'inventory': return <Inventory products={filteredProducts} userRole={userRole} userPermissions={userPermissions} userBoutique={userBoutique} boutiques={filteredBoutiques} onNavigate={setCurrentView} onTransferProduct={(id) => { setPreSelectedTransferProduct(id); setCurrentView('transfers'); }} currentProvenderieId={currentProvenderieId} categories={categories} />;
       case 'transfers': return <Transfers products={filteredProducts} transfers={filteredTransfers} boutiques={filteredBoutiques} userRole={userRole} userBoutique={userBoutique} userName={currentEmployee?.name || 'Administrateur'} preSelectedProductId={preSelectedTransferProduct} onClearPreSelection={() => setPreSelectedTransferProduct(null)} currentProvenderieId={currentProvenderieId} />;
-      case 'pos': return <POS products={filteredProducts} employees={filteredEmployees} invoices={filteredInvoices} expenses={filteredExpenses} customers={filteredCustomers} onCheckout={handleCheckout} onAddExpense={handleAddExpense} onVoidLastSale={handleVoidLastSale} userBoutique={userBoutique} userRole={userRole} userPermissions={userPermissions} boutiques={filteredBoutiques} companyName={settings.companyName} userName={currentEmployee?.name || 'Administrateur'} currentProvenderieId={currentProvenderieId} provenderies={provenderies} categories={categories} />;
+      case 'pos': return <POS products={filteredProducts} employees={filteredEmployees} invoices={filteredInvoices} expenses={filteredExpenses} customers={filteredCustomers} onCheckout={handleCheckout} onAddExpense={handleAddExpense} onVoidLastSale={handleVoidLastSale} userBoutique={userBoutique} userRole={userRole} userPermissions={userPermissions} boutiques={filteredBoutiques} companyName={companyName} userName={currentEmployee?.name || 'Administrateur'} currentProvenderieId={currentProvenderieId} provenderies={provenderies} categories={categories} />;
       case 'analytics': return <Analytics products={filteredProducts} invoices={filteredInvoices} boutiques={filteredBoutiques} userRole={userRole} userBoutique={userBoutique} categories={categories} />;
       case 'accounting': return <Accounting invoices={filteredInvoices} products={filteredProducts} expenses={filteredExpenses} transfers={filteredTransfers} setExpenses={setExpenses} onUpdateInvoice={handleUpdateInvoice} boutiques={filteredBoutiques} userRole={userRole} userBoutique={userBoutique} customers={filteredCustomers} currentProvenderieId={currentProvenderieId} />;
-      case 'invoices': return <Invoices invoices={filteredInvoices} products={filteredProducts} setProducts={setProducts} onUpdateInvoice={handleUpdateInvoice} boutiques={filteredBoutiques} companyName={settings.companyName} userRole={userRole} userPermissions={userPermissions} userBoutique={userBoutique} customers={filteredCustomers} currentProvenderieId={currentProvenderieId} provenderies={provenderies} />;
+      case 'invoices': return <Invoices invoices={filteredInvoices} products={filteredProducts} setProducts={setProducts} onUpdateInvoice={handleUpdateInvoice} boutiques={filteredBoutiques} companyName={companyName} userRole={userRole} userPermissions={userPermissions} userBoutique={userBoutique} customers={filteredCustomers} currentProvenderieId={currentProvenderieId} provenderies={provenderies} />;
       case 'employees': return <Employees employees={filteredEmployees} roles={filteredRoles} boutiques={filteredBoutiques} expenses={filteredExpenses} userRole={userRole} userBoutique={userBoutique} currentProvenderieId={currentProvenderieId} />;
       case 'boutiques': return <Boutiques products={filteredProducts} boutiques={filteredBoutiques} userRole={userRole} userBoutique={userBoutique} transfers={filteredTransfers} currentProvenderieId={currentProvenderieId} userRoleObj={userRoleObj} categories={categories} />;
       case 'advisor': return <Assistant products={filteredProducts} invoices={filteredInvoices} boutiques={filteredBoutiques} employees={filteredEmployees} expenses={filteredExpenses} userRole={userRole} userBoutique={userBoutique} />;
@@ -823,7 +827,7 @@ const InnerApp = () => {
                 </div>
                 <div className="flex flex-col min-w-0 flex-1">
                   <h1 className="font-display font-black text-xs sm:text-sm tracking-tight text-white leading-none truncate max-w-[120px] xs:max-w-[160px] sm:max-w-none">
-                    {settings.companyName}
+                    {companyName}
                   </h1>
                   <span className="text-[8px] sm:text-[9px] uppercase font-bold tracking-widest text-emerald-400 mt-0.5 truncate">
                     {language === 'fr' ? 'Smart Agro' : 'Smart Agro'}
@@ -865,7 +869,7 @@ const InnerApp = () => {
           userName={currentEmployee?.name || 'Administrateur'} 
           isCollapsed={isMobile ? false : isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          companyName={settings.companyName}
+          companyName={companyName}
           isMobile={isMobile}
           isOpen={mobileSidebarOpen}
           onClose={() => setMobileSidebarOpen(false)}

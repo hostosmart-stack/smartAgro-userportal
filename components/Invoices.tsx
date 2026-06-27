@@ -1018,16 +1018,10 @@ export const Invoices: React.FC<InvoicesProps> = ({ invoices, products, onUpdate
                                                   </div>
                                                   {(parseFloat(paymentAmount) || 0) > (selectedInvoice.remainingDebt || (selectedInvoice.total - (selectedInvoice.amountPaid || 0) - (selectedInvoice.advanceUsed || 0))) && (
                                                       <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest mt-1">
-                                                          Monnaie à rendre: {((parseFloat(paymentAmount) || 0) - (selectedInvoice.remainingDebt || (selectedInvoice.total - (selectedInvoice.amountPaid || 0) - (selectedInvoice.advanceUsed || 0)))).toLocaleString()} F
+                                                          Monnaie à rendre: {(((parseFloat(paymentAmount) || 0) - (selectedInvoice.remainingDebt || (selectedInvoice.total - (selectedInvoice.amountPaid || 0) - (selectedInvoice.advanceUsed || 0))))).toLocaleString()} F
                                                       </span>
                                                   )}
                                               </div>
-                                              <button 
-                                                  onClick={() => setPaymentAmount((selectedInvoice.remainingDebt || (selectedInvoice.total - (selectedInvoice.amountPaid || 0) - (selectedInvoice.advanceUsed || 0))).toString())}
-                                                  className="text-[10px] font-black text-farm-600 uppercase tracking-widest hover:text-farm-700 transition-colors bg-farm-50 px-3 py-1 rounded-full border border-farm-100 self-start"
-                                              >
-                                                  Tout régler
-                                              </button>
                                           </div>
                                       </div>
                                       <div className="space-y-2">

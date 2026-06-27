@@ -107,6 +107,10 @@
   }
 }
 
+body {
+  overscroll-behavior-y: none;
+}
+
 :root {
   /* Default Theme (Farm - Green) */
   --color-farm-50: #f0fdf4;

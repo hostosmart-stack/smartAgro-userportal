@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, Palette, Building, Save, CheckCircle2, Moon, Sun, Monitor, Database, Server, Eye, KeyRound, Clock, ShieldCheck, ShieldAlert, AlertTriangle, Plus, Trash2, Edit2, X, Check, RotateCcw, Tag } from 'lucide-react';
 import { useNotifications } from './ui/Notifications';
 import { useLanguage } from '../contexts/LanguageContext';
-import { subscribeToRequestStats } from '../services/db';
+import { subscribeToRequestStats, saveProvenderie } from '../services/db';
 import { Provenderie } from '../types';
 
 interface SettingsProps {
@@ -105,10 +105,24 @@ export const Settings: React.FC<SettingsProps> = ({ onSettingsChange, currentSet
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const updatedSettings = { ...settings, customCategories: categoriesList };
     onSettingsChange(updatedSettings);
     localStorage.setItem('smartAgro_settings', JSON.stringify(updatedSettings));
+    
+    if (currentProvenderie) {
+        try {
+            const updatedProvenderie = {
+                ...currentProvenderie,
+                name: updatedSettings.companyName,
+                categories: categoriesList
+            };
+            await saveProvenderie(updatedProvenderie);
+        } catch (error) {
+            console.error("Failed to save provenderie settings", error);
+        }
+    }
+    
     window.dispatchEvent(new Event('settingsChanged'));
     notify(t('settings.saved'), "success");
   };

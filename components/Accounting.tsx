@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Invoice, Product, Expense, Payment, Boutique, StockTransfer, Customer } from '../types';
 import { Wallet, TrendingDown, TrendingUp, Calendar, Trash2, ArrowDownRight, AlertCircle, CheckCircle2, User, Coins, X, FileText, AlertTriangle, Package, ArrowRight } from 'lucide-react';
-import { deleteExpense, processPaymentRecovery } from '../services/db';
+import { deleteExpense, processPaymentRecovery, saveExpense } from '../services/db';
 import { useNotifications } from './ui/Notifications';
 import { Pagination } from './Pagination';
 
@@ -23,7 +23,14 @@ type TimeRange = 'today' | 'week' | 'month' | 'year' | 'all';
 
 export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expenses, transfers = [], onUpdateInvoice, boutiques = [], userRole = 'Admin', userBoutique = 'Toutes', customers = [], currentProvenderieId }) => {
   const { notify } = useNotifications();
-  const [activeTab, setActiveTab] = useState<'expenses' | 'debts' | 'transfers'>('expenses');
+  const [activeTab, setActiveTab] = useState<'expenses' | 'debts' | 'transfers'>(() => {
+    const saved = localStorage.getItem('smartAgro_initialAccountingTab');
+    if (saved === 'expenses' || saved === 'debts' || saved === 'transfers') {
+      localStorage.removeItem('smartAgro_initialAccountingTab');
+      return saved;
+    }
+    return 'expenses';
+  });
   const [timeRange, setTimeRange] = useState<TimeRange>('month');
   const [boutiqueFilter, setBoutiqueFilter] = useState<string>(() => {
     if (userBoutique && userBoutique !== 'Toutes') return userBoutique;
@@ -49,6 +56,50 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
   const [expensesPage, setExpensesPage] = useState(1);
   const [transfersPage, setTransfersPage] = useState(1);
   const itemsPerPage = 5;
+
+  // New Expense State
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [isSubmittingExpense, setIsSubmittingExpense] = useState(false);
+  const [newExpense, setNewExpense] = useState<Partial<Expense>>({
+    amount: 0,
+    category: 'AUTRE',
+    description: '',
+    boutique: isSuperOrAdmin ? boutiques[0]?.id : userBoutique
+  });
+
+  const handleSaveExpense = async () => {
+    if (!newExpense.amount || newExpense.amount <= 0 || !newExpense.description) {
+      notify("Veuillez remplir le montant et le motif", "error");
+      return;
+    }
+    setIsSubmittingExpense(true);
+    try {
+      const expense: Expense = {
+        id: Date.now().toString(),
+        date: new Date().toISOString(),
+        amount: newExpense.amount,
+        category: newExpense.category as any || 'AUTRE',
+        description: newExpense.description,
+        deleted: false,
+        provenderieId: currentProvenderieId,
+        boutique: newExpense.boutique || userBoutique,
+      };
+      await saveExpense(expense);
+      notify("Dépense enregistrée", "success");
+      setIsExpenseModalOpen(false);
+      setNewExpense({
+        amount: 0,
+        category: 'AUTRE',
+        description: '',
+        boutique: isSuperOrAdmin ? boutiques[0]?.id : userBoutique
+      });
+    } catch (error) {
+      console.error(error);
+      notify("Erreur lors de l'enregistrement de la dépense", "error");
+    } finally {
+      setIsSubmittingExpense(false);
+    }
+  };
 
   // Debt Recovery Modal State
   const [recoveringInvoice, setRecoveringInvoice] = useState<Invoice | null>(null);
@@ -335,8 +386,18 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
                     Transferts <span className="bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full text-xs font-bold dark:bg-blue-900/30 dark:text-blue-400">{filteredTransfers.length}</span>
                 </button>
              </div>
-         </div>
-      </div>
+             
+             {isSuperOrAdmin && (
+                 <button 
+                     onClick={() => setIsExpenseModalOpen(true)}
+                     className="bg-red-600 hover:bg-red-700 text-white font-bold text-sm px-6 py-3 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 w-full lg:w-auto"
+                 >
+                     <TrendingDown className="w-4 h-4" />
+                     Enregistrer une Sortie
+                 </button>
+             )}
+          </div>
+       </div>
 
       {activeTab === 'expenses' ? (
       <>
@@ -462,7 +523,21 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
                                         {inv.boutique || 'N/A'}
                                     </span>
                                 </td>
-                                <td className="px-6 py-4 text-right font-bold text-gray-900 dark:text-white font-mono">{formatCurrency(inv.total)}</td>
+                                <td className="px-6 py-4 text-right font-bold text-gray-900 dark:text-white font-mono">
+                                  {formatCurrency(inv.total)}
+                                  {inv.status !== 'PAYÉ' && (
+                                    <div 
+                                      className="text-[10px] text-rose-500 hover:text-rose-600 mt-1 cursor-pointer hover:underline transition-colors flex items-center justify-end gap-1"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setRecoveringInvoice(inv);
+                                      }}
+                                    >
+                                      <span>Reste: {formatCurrency(inv.total - (inv.amountPaid || 0) - (inv.advanceUsed || 0))}</span>
+                                      <CheckCircle2 className="w-3 h-3" />
+                                    </div>
+                                  )}
+                                </td>
                                 <td className="px-6 py-4 text-center">
                                     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm ${
                                         inv.status === 'PAYÉ' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' : 
@@ -496,19 +571,21 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
                         <div className="w-1 h-4 bg-red-500 rounded-full"></div>
                         Détail des Dépenses
                       </h3>
-                      <select 
-                          className="w-full sm:w-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs font-medium px-3 py-1.5 rounded-lg outline-none cursor-pointer hover:border-farm-400 transition-colors"
-                          value={expenseCategoryFilter}
-                          onChange={e => setExpenseCategoryFilter(e.target.value)}
-                      >
-                          <option value="all">Toutes catégories</option>
-                          <option value="ELECTRICITE">Electricité</option>
-                          <option value="EAU">Eau</option>
-                          <option value="SALAIRE">Salaire</option>
-                          <option value="INTERNET">Internet</option>
-                          <option value="RATION">Rations</option>
-                          <option value="DIVERS">Divers</option>
-                      </select>
+                      <div className="flex items-center gap-2">
+                        <select 
+                            className="w-full sm:w-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs font-medium px-3 py-1.5 rounded-lg outline-none cursor-pointer hover:border-farm-400 transition-colors"
+                            value={expenseCategoryFilter}
+                            onChange={e => setExpenseCategoryFilter(e.target.value)}
+                        >
+                            <option value="all">Toutes catégories</option>
+                            <option value="ELECTRICITE">Electricité</option>
+                            <option value="EAU">Eau</option>
+                            <option value="SALAIRE">Salaire</option>
+                            <option value="INTERNET">Internet</option>
+                            <option value="RATION">Rations</option>
+                            <option value="DIVERS">Divers</option>
+                        </select>
+                      </div>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2">
                       <input 
@@ -763,6 +840,94 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
             </div>
         </div>
       </>
+      )}
+
+      {/* --- EXPENSE MODAL --- */}
+      {isExpenseModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+              <div className="bg-white rounded-[2.5rem] w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-white/20">
+                  <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                      <div>
+                          <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Nouvelle Dépense</h3>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Enregistrer une sortie de caisse</p>
+                      </div>
+                      <button onClick={() => setIsExpenseModalOpen(false)} className="p-2 hover:bg-slate-200 rounded-full text-slate-400 transition-colors">
+                          <X className="w-5 h-5" />
+                      </button>
+                  </div>
+                  
+                  <div className="p-8 space-y-6">
+                      <div className="space-y-2">
+                          <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                             Montant de la Dépense (FCFA)
+                          </label>
+                          <input 
+                              type="number" 
+                              value={newExpense.amount || ''}
+                              onChange={e => setNewExpense({...newExpense, amount: Number(e.target.value)})}
+                              className="w-full text-center text-3xl font-black text-slate-900 bg-slate-50 border-2 border-slate-100 rounded-2xl py-4 outline-none focus:border-red-500 focus:bg-white transition-all font-mono"
+                              placeholder="0"
+                              autoFocus
+                          />
+                      </div>
+                      <div className="space-y-2">
+                          <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Catégorie</label>
+                          <select 
+                              value={newExpense.category}
+                              onChange={e => setNewExpense({...newExpense, category: e.target.value as any})}
+                              className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-3 px-4 outline-none focus:border-red-500 focus:bg-white transition-all text-slate-700 font-bold"
+                          >
+                              <option value="ELECTRICITE">Electricité</option>
+                              <option value="EAU">Eau</option>
+                              <option value="SALAIRE">Salaire</option>
+                              <option value="INTERNET">Internet</option>
+                              <option value="RATION">Rations</option>
+                              <option value="DIVERS">Divers</option>
+                              <option value="AUTRE">Autre</option>
+                          </select>
+                      </div>
+                      <div className="space-y-2">
+                          <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Motif de la Dépense</label>
+                          <input 
+                              type="text" 
+                              value={newExpense.description || ''}
+                              onChange={e => setNewExpense({...newExpense, description: e.target.value})}
+                              className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-3 px-4 outline-none focus:border-red-500 focus:bg-white transition-all text-slate-700 font-bold"
+                              placeholder="Ex: Achat de fournitures"
+                          />
+                      </div>
+                      {isSuperOrAdmin && (
+                          <div className="space-y-2">
+                              <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Boutique</label>
+                              <select 
+                                  value={newExpense.boutique || ''}
+                                  onChange={e => setNewExpense({...newExpense, boutique: e.target.value})}
+                                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-3 px-4 outline-none focus:border-red-500 focus:bg-white transition-all text-slate-700 font-bold"
+                              >
+                                  {boutiques.map(b => (
+                                      <option key={b.id} value={b.id}>{b.name}</option>
+                                  ))}
+                              </select>
+                          </div>
+                      )}
+                  </div>
+                  <div className="p-8 border-t border-slate-100 bg-slate-50/50 flex gap-3">
+                      <button 
+                          onClick={() => setIsExpenseModalOpen(false)}
+                          className="flex-1 py-4 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-200 transition-all"
+                      >
+                          Annuler
+                      </button>
+                      <button 
+                          onClick={handleSaveExpense}
+                          disabled={isSubmittingExpense}
+                          className="flex-1 py-4 bg-red-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-red-200 hover:bg-red-700 transition-all active:scale-95 disabled:opacity-50"
+                      >
+                          {isSubmittingExpense ? 'Enregistrement...' : 'Valider'}
+                      </button>
+                  </div>
+              </div>
+          </div>
       )}
 
       {/* --- RECOVERY MODAL --- */}

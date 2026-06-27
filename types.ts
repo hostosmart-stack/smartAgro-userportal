@@ -127,6 +127,7 @@ export interface Provenderie {
   licenseEnforced?: boolean;
   licenseExpiryDate?: string;
   licenseType?: string;
+  categories?: string[];
   deleted?: boolean;
 }
 

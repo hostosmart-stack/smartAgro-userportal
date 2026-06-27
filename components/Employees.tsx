@@ -71,7 +71,7 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [viewingEmployee, setViewingEmployee] = useState<Employee | null>(null);
   const [showConfirmDelete, setShowConfirmDelete] = useState<string | null>(null);
-  const [creationType, setCreationType] = useState<'USER' | 'EMPLOYEE'>('USER');
+  const [creationType, setCreationType] = useState<'USER' | 'EMPLOYEE'>('EMPLOYEE');
 
   // Role Management State
   const [isAddingRole, setIsAddingRole] = useState(false);
@@ -223,7 +223,7 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
       salary: 0,
       ration: 0
     });
-    setCreationType('USER');
+    setCreationType('EMPLOYEE');
   };
 
   const createEmployeeAccount = async (username: string, pin: string) => {
@@ -303,51 +303,23 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
         }
     }
 
-    // Validate username/pin if they are a system USER
-    if (creationType === 'USER') {
-        if (!form.username) {
-            notify("L'identifiant de connexion est requis pour un utilisateur", "error");
-            return;
-        }
-        if (!form.pin && !editingId) {
-            notify("Le code PIN est requis pour créer un utilisateur", "error");
-            return;
-        }
-    }
-
     setIsSubmitting(true);
     try {
-      const savedUsername = creationType === 'USER' ? form.username : '';
-      const savedPin = creationType === 'USER' ? form.pin : '';
-      const savedEmail = creationType === 'USER' && savedUsername ? `${savedUsername}@gmail.com` : (form.email || '');
-
-      // Create Auth Account if new system USER with credentials
-      if (creationType === 'USER' && !editingId && savedUsername && savedPin) {
-          const success = await createEmployeeAccount(savedUsername, savedPin);
-          if (!success) {
-              setIsSubmitting(false);
-              return;
-          }
-      }
-
-      const defaultRoleIds = creationType === 'USER' ? (form.roleIds || (form.roleId ? [form.roleId] : [])) : [];
-      const defaultRoleNames = creationType === 'USER' ? (form.roles || (form.role ? form.role.split(',').map(r => r.trim()) : [])) : [];
-
       const employee: Employee = {
         id: editingId || Date.now().toString(),
         name: form.name,
-        role: creationType === 'USER' ? (defaultRoleNames.join(', ') || 'Vendeur') : 'Employé Simple',
-        roleId: defaultRoleIds[0] || '',
-        roleIds: defaultRoleIds,
-        roles: defaultRoleNames,
+        role: 'Employé Simple',
+        roleId: '',
+        roleIds: [],
+        roles: [],
         phone: form.phone,
-        email: savedEmail,
+        email: form.email || '',
         contactPersonName: form.contactPersonName,
         contactPersonRelationship: form.contactPersonRelationship,
         contactPersonPhone: form.contactPersonPhone,
-        username: savedUsername,
-        pin: savedPin,
-        assignedBoutique: form.assignedBoutique || (defaultRoleNames.includes('Admin') ? 'Toutes' : boutiques[0]?.id),
+        username: '',
+        pin: '',
+        assignedBoutique: form.assignedBoutique || boutiques[0]?.id,
         salary: Number(form.salary) || 0,
         ration: Number(form.ration) || 0,
         provenderieId: currentProvenderieId,
@@ -355,7 +327,7 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
       };
       
       await saveEmployee(employee);
-      notify(editingId ? "Enregistrement modifié" : (creationType === 'USER' ? "Utilisateur système ajouté et compte créé" : "Employé ajouté avec succès"), "success");
+      notify(editingId ? "Enregistrement modifié" : "Employé ajouté avec succès", "success");
       setIsAdding(false);
       setEditingId(null);
     } catch (e) {
@@ -508,33 +480,15 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
            <p className="text-gray-500 mt-1 font-medium">{t('employees.subtitle')}</p>
         </div>
         <div className="flex gap-2">
-            {(userRole === 'Admin' || isSuperAdminUser) && (
-                <button 
-                    onClick={() => setActiveTab(activeTab === 'employees' ? 'roles' : 'employees')}
-                    className={`px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all font-bold text-sm border ${activeTab === 'roles' ? 'bg-farm-50 border-farm-200 text-farm-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-                >
-                    <Shield className="w-4 h-4" /> {activeTab === 'employees' ? 'Gérer les Rôles' : 'Gérer les Employés'}
-                </button>
-            )}
-            {activeTab === 'employees' ? (
-                <button 
-                    onClick={handleAddClick}
-                    className="bg-farm-600 hover:bg-farm-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-farm-200 font-bold text-sm"
-                >
-                    <Plus className="w-4 h-4" /> {t('employees.add_employee')}
-                </button>
-            ) : (
-                <button 
-                    onClick={() => { setIsAddingRole(true); setEditingRoleId(null); setRoleForm({ name: '', permissions: [] }); }}
-                    className="bg-farm-600 hover:bg-farm-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-farm-200 font-bold text-sm"
-                >
-                    <Plus className="w-4 h-4" /> Ajouter un Rôle
-                </button>
-            )}
+            <button 
+                onClick={handleAddClick}
+                className="bg-farm-600 hover:bg-farm-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-farm-200 font-bold text-sm"
+            >
+                <Plus className="w-4 h-4" /> {t('employees.add_employee')}
+            </button>
         </div>
       </div>
 
-      {activeTab === 'employees' ? (
       <div className="bg-white rounded-3xl shadow-glass border border-gray-100/50 overflow-hidden">
          <div className="p-4 border-b border-gray-100 bg-gray-50/50">
             <div className="relative max-w-md">
@@ -707,46 +661,6 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
             </table>
          </div>
       </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {roles
-              .filter(r => {
-                const isSuper = r.name.toLowerCase().trim() === 'superadmin' || r.name.toLowerCase().trim() === 'super-admin';
-                return isSuperAdminUser || !isSuper;
-              })
-              .map((role, idx) => (
-                <div key={role.id || `role-${idx}`} className="bg-white rounded-3xl shadow-glass border border-gray-100/50 p-6 flex flex-col hover:shadow-xl transition-all group">
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="p-3 bg-farm-50 rounded-2xl text-farm-600">
-                            <Shield className="w-6 h-6" />
-                        </div>
-                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button 
-                                onClick={() => { setEditingRoleId(role.id); setRoleForm(role); setIsAddingRole(true); }}
-                                className="p-2 text-gray-400 hover:text-farm-600 hover:bg-farm-50 rounded-xl transition-all"
-                            >
-                                <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button 
-                                onClick={() => deleteRole(role.id)}
-                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
-                            >
-                                <Trash2 className="w-4 h-4" />
-                            </button>
-                        </div>
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">{translateRoleName(role.name)}</h3>
-                    <div className="flex flex-wrap gap-2 mt-auto">
-                        {(role.permissions || []).map((p, pIdx) => (
-                            <span key={p ? `${p}-${pIdx}` : `perm-${pIdx}`} className="px-2 py-1 bg-gray-50 text-gray-500 text-[10px] font-bold rounded-lg border border-gray-100 uppercase tracking-wider">
-                                {availablePermissions.find(ap => ap.id === p)?.label || p}
-                            </span>
-                        ))}
-                    </div>
-                </div>
-            ))}
-        </div>
-      )}
 
       {/* Employee Details Modal */}
       {viewingEmployee && (
@@ -922,125 +836,10 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
                     <input className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-farm-500 outline-none" value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Ex: Jean Kouassi"/>
                   </div>
 
-                  <div className="space-y-2">
-                     <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1"><Shield className="w-3 h-3"/> Type d'enregistrement</label>
-                     <div className="grid grid-cols-2 gap-2">
-                         <button
-                             type="button"
-                             onClick={() => setCreationType('USER')}
-                             className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex flex-col items-center justify-center gap-2 ${creationType === 'USER' ? 'border-farm-500 bg-farm-50/50 text-farm-700' : 'border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-gray-600'}`}
-                         >
-                             <Shield className="w-4 h-4 text-farm-500" />
-                             <span>Utilisateur Système</span>
-                             <span className="text-[10px] font-normal text-gray-400 whitespace-normal text-center">Accès de connexion (codes)</span>
-                         </button>
-                         <button
-                             type="button"
-                             onClick={() => setCreationType('EMPLOYEE')}
-                             className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex flex-col items-center justify-center gap-2 ${creationType === 'EMPLOYEE' ? 'border-farm-500 bg-farm-50/50 text-farm-700' : 'border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-gray-600'}`}
-                         >
-                             <User className="w-4 h-4 text-farm-400" />
-                             <span>Employé Simple</span>
-                             <span className="text-[10px] font-normal text-gray-400 whitespace-normal text-center">Pas d'accès (payroll seul)</span>
-                         </button>
-                     </div>
-                 </div>
+
                  
                  <div className="grid grid-cols-2 gap-4">
-                    {creationType === 'USER' && (
-                    <div className="space-y-1">
-                                                 <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1"><Briefcase className="w-3 h-3"/> Rôles (Sélectionnez plusieurs)</label>
-                         <div className="w-full border border-gray-200 rounded-xl p-3 bg-white max-h-36 overflow-y-auto space-y-1.5 shadow-sm text-sm">
-                             {availableRoles
-                               .filter(r => {
-                                 const isSuperRole = r.name.toLowerCase().trim() === 'superadmin' || r.name.toLowerCase().trim() === 'super-admin';
-                                 return isSuperAdminUser || !isSuperRole;
-                               })
-                               .map((r, idx) => {
-                                 const selectedRoleIds = form.roleIds || (form.roleId ? [form.roleId] : []);
-                                 const isChecked = selectedRoleIds.includes(r.id);
-                                 return (
-                                   <label key={r.id || `avail-role-${idx}`} className="flex items-center gap-2 p-1.5 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors text-xs font-medium text-gray-700">
-                                       <input 
-                                           type="checkbox" 
-                                           checked={isChecked}
-                                           onChange={() => {
-                                               let newRoleIds = [...selectedRoleIds];
-                                               if (isChecked) {
-                                                   newRoleIds = newRoleIds.filter(id => id !== r.id);
-                                               } else {
-                                                   newRoleIds.push(r.id);
-                                               }
-                                               const selectedRoleObjs = availableRoles.filter(roleObj => newRoleIds.includes(roleObj.id));
-                                               const newRoleNames = selectedRoleObjs.map(roleObj => roleObj.name);
-                                               setForm({
-                                                   ...form,
-                                                   roleIds: newRoleIds,
-                                                   roles: newRoleNames,
-                                                   roleId: newRoleIds[0] || '',
-                                                   role: newRoleNames.join(', ') || ''
-                                               });
-                                           }}
-                                           className="rounded border-gray-300 text-farm-600 focus:ring-farm-500 h-4 w-4"
-                                       />
-                                       <span>{translateRoleName(r.name)}</span>
-                                   </label>
-                                 );
-                               })}
-                         </div>
-                         {(() => {
-                              const selectedRoleIds = form.roleIds || (form.roleId ? [form.roleId] : []);
-                              const selectedRoleObjs = availableRoles.filter(r => selectedRoleIds.includes(r.id));
-                              const setPerms = new Set<Permission>();
-                              selectedRoleObjs.forEach(r => r.permissions?.forEach(p => setPerms.add(p)));
-                              const aggregatedPermissions = Array.from(setPerms);
-                              
-                              return aggregatedPermissions.length > 0 && (
-                                  <div className="mt-2 flex flex-wrap gap-1">
-                                      <span className="text-[9px] text-gray-400 w-full mb-1">Permissions cumulées :</span>
-                                      {aggregatedPermissions.map((p, idx) => (
-                                          <span key={p ? `${p}-${idx}` : `agg-perm-${idx}`} className="px-1.5 py-0.5 bg-gray-100 text-gray-500 text-[9px] font-bold rounded uppercase animate-in fade-in zoom-in-95">
-                                              {availablePermissions.find(ap => ap.id === p)?.label || p}
-                                          </span>
-                                      ))}
-                                  </div>
-                              );
-                          })()}
-                    </div>
-                    )}
-                    {creationType === 'EMPLOYEE' && (
-                     <div className="space-y-1">
-                          <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1"><Briefcase className="w-3 h-3"/> Poste / Rôle</label>
-                          <select 
-                              className="w-full p-3 border border-gray-200 rounded-xl text-sm bg-white outline-none" 
-                              value={form.roleId || ''} 
-                              onChange={e => {
-                                  const rId = e.target.value;
-                                  const rObj = availableRoles.find(role => role.id === rId);
-                                  setForm({
-                                      ...form,
-                                      roleId: rId,
-                                      role: rObj ? rObj.name : 'Employé Simple',
-                                      roleIds: rId ? [rId] : [],
-                                      roles: rObj ? [rObj.name] : []
-                                  });
-                              }}
-                          >
-                              <option value="">Sélectionner un rôle de la DB...</option>
-                              {availableRoles
-                                .filter(r => {
-                                  const isSuperRole = r.name.toLowerCase().trim() === 'superadmin' || r.name.toLowerCase().trim() === 'super-admin';
-                                  return isSuperAdminUser || !isSuperRole;
-                                })
-                                .map((r, idx) => (
-                                  <option key={r.id || `role-sel-opt-${idx}`} value={r.id}>
-                                      {translateRoleName(r.name)}
-                                  </option>
-                                ))
-                              }
-                          </select>
-                     </div>
-                     )}
+
                      <div className="space-y-1">
                         <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1"><Store className="w-3 h-3"/> Boutique</label>
                         <select className="w-full p-3 border border-gray-200 rounded-xl text-sm bg-white outline-none" value={form.assignedBoutique} onChange={e => setForm({...form, assignedBoutique: e.target.value as any})}>
@@ -1081,22 +880,6 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
                       </div>
                   </div>
 
-                  {creationType === 'USER' && (
-                     <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 space-y-4 animate-in slide-in-from-top-2 duration-300">
-                        <h4 className="text-xs font-bold text-blue-900 uppercase border-b border-blue-200 pb-2">Identifiants de Connexion</h4>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                               <label className="text-[10px] font-bold text-blue-700 uppercase">{t('login.username')}</label>
-                               <input className="w-full p-2 border border-blue-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" value={form.username || ''} onChange={e => setForm({...form, username: e.target.value})} placeholder="Ex: jean.k"/>
-                            </div>
-                            <div className="space-y-1">
-                               <label className="text-[10px] font-bold text-blue-700 uppercase">Code PIN / Mot de passe</label>
-                               <input type="text" className="w-full p-2 border border-blue-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" value={form.pin || ''} onChange={e => setForm({...form, pin: e.target.value})} placeholder="****"/>
-                            </div>
-                        </div>
-                     </div>
-                  )}
-
                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                        <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1"><DollarSign className="w-3 h-3"/> Salaire Mensuel</label>
@@ -1119,88 +902,6 @@ export const Employees: React.FC<EmployeesProps> = ({ employees, roles = [], bou
         </div>
       )}
       
-      {/* Role Add/Edit Modal */}
-      {isAddingRole && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in">
-              <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl flex flex-col animate-in zoom-in-95 border border-gray-100 max-h-[90vh]">
-                  <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 rounded-t-3xl shrink-0">
-                      <h3 className="font-bold text-lg font-display">{editingRoleId ? 'Modifier le Rôle' : 'Ajouter un Rôle'}</h3>
-                      <button onClick={() => setIsAddingRole(false)} className="p-1 hover:bg-gray-200 rounded-full transition-colors"><X className="w-5 h-5 text-gray-500"/></button>
-                  </div>
-                  
-                  <div className="p-6 space-y-6 overflow-y-auto">
-                      <div className="space-y-1">
-                          <label className="text-xs font-bold text-gray-500 uppercase">Nom du Rôle</label>
-                          <input 
-                            className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-farm-500 outline-none" 
-                            value={roleForm.name} 
-                            onChange={e => setRoleForm({...roleForm, name: e.target.value})} 
-                            placeholder="Ex: Vendeur, Magasinier..."
-                          />
-                      </div>
-
-                      <div className="space-y-4">
-                          <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-2">
-                              <Shield className="w-3 h-3" /> Permissions & Accès Granulaires
-                          </label>
-                          <div className="space-y-4">
-                              {availablePermissions.map(perm => (
-                                  <div key={perm.id} className="border border-gray-100 rounded-2xl overflow-hidden">
-                                      <button
-                                        onClick={() => togglePermission(perm.id)}
-                                        className={`w-full flex items-center justify-between p-4 transition-all text-left ${roleForm.permissions?.includes(perm.id) ? 'bg-farm-50 text-farm-700' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
-                                      >
-                                          <div className="flex items-center gap-3">
-                                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${roleForm.permissions?.includes(perm.id) ? 'bg-farm-600 text-white' : 'bg-gray-100 text-gray-400'}`}>
-                                                  <Check className={`w-4 h-4 ${roleForm.permissions?.includes(perm.id) ? 'opacity-100' : 'opacity-0'}`} />
-                                              </div>
-                                              <span className="font-bold">{perm.label}</span>
-                                          </div>
-                                          <Settings className={`w-4 h-4 transition-transform ${roleForm.permissions?.includes(perm.id) ? 'rotate-0' : 'rotate-90 opacity-0'}`} />
-                                      </button>
-                                      
-                                      {roleForm.permissions?.includes(perm.id) && perm.components && (
-                                          <div className="p-4 bg-gray-50/50 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                              {perm.components.map((comp, compIdx) => {
-                                                  const pagePerms = roleForm.pagePermissions;
-                                                   let pagePerm: any = null;
-                                                   if (Array.isArray(pagePerms)) {
-                                                       pagePerm = pagePerms.find(p => p.pageId === perm.id);
-                                                   } else if (pagePerms && typeof pagePerms === 'object') {
-                                                       pagePerm = pagePerms[perm.id as any];
-                                                   }
-                                                   const isVisible = (pagePerm && Array.isArray(pagePerm.components))
-                                                       ? (pagePerm.components.find((c: any) => c.id === comp.id)?.visible ?? true)
-                                                       : true;
-                                                  return (
-                                                      <button
-                                                          key={comp.id || `comp-${compIdx}`}
-                                                          onClick={() => toggleComponentVisibility(perm.id, comp.id)}
-                                                          className={`flex items-center gap-2 p-2 rounded-lg border text-[10px] font-bold uppercase tracking-wider transition-all ${isVisible ? 'bg-white border-farm-200 text-farm-600 shadow-sm' : 'bg-gray-100 border-gray-200 text-gray-400'}`}
-                                                      >
-                                                          <div className={`w-3 h-3 rounded-full ${isVisible ? 'bg-farm-500' : 'bg-gray-300'}`} />
-                                                          {comp.name}
-                                                      </button>
-                                                  );
-                                              })}
-                                          </div>
-                                      )}
-                                  </div>
-                              ))}
-                          </div>
-                      </div>
-                  </div>
-
-                  <div className="p-5 border-t border-gray-100 flex justify-end gap-3 bg-gray-50/50 rounded-b-3xl">
-                      <button onClick={() => setIsAddingRole(false)} className="px-5 py-2.5 text-gray-600 font-bold hover:bg-white rounded-xl transition-colors">{t('common.cancel')}</button>
-                      <button onClick={handleSaveRole} disabled={isSubmitting || !roleForm.name} className="px-6 py-2.5 bg-farm-600 text-white rounded-xl font-bold shadow-lg hover:bg-farm-700 flex items-center gap-2 transition-all">
-                          {isSubmitting ? <Loader2 className="animate-spin w-4 h-4"/> : t('common.save')}
-                      </button>
-                  </div>
-              </div>
-          </div>
-      )}
-
       {showConfirmDelete && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in">
               <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6 animate-in zoom-in-95">
