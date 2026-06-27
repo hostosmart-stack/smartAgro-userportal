@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Product, CartItem, Invoice, Category, ProductVariant, Expense, Employee, Boutique, Customer, Provenderie } from '../types';
+import { Product, CartItem, Invoice, Category, ProductVariant, Expense, Employee, Boutique, Customer, Provenderie, Payment } from '../types';
 import { Search, ShoppingCart, Plus, Trash2, CheckCircle, Receipt, X, Tag, TrendingDown, TrendingUp, Save, Edit, Loader2, AlertTriangle, User, DollarSign, Printer, ArrowRight, CreditCard } from 'lucide-react';
 import { useNotifications } from './ui/Notifications';
 import { saveEmployee, saveCustomer } from '../services/db';
 import { InvoiceTemplate } from './InvoiceTemplate';
 import { formatStock } from '../utils';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface POSProps {
   products: Product[];
@@ -12,7 +13,7 @@ interface POSProps {
   invoices?: Invoice[];
   expenses?: Expense[];
   customers: Customer[];
-  onCheckout: (invoice: Invoice, updatedStock: Product[], customer?: Customer) => void;
+  onCheckout: (invoice: Invoice, updatedStock: Product[], customer?: Customer, updatedPreviousInvoices?: Invoice[]) => void;
   onAddExpense: (expense: Expense) => void;
   onVoidLastSale: (invoiceId: string, restoredStock: Product[]) => void;
   userRole?: string;
@@ -73,6 +74,7 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
   const [isWholesale, setIsWholesale] = useState(false);
   const [isRegisteredMode, setIsRegisteredMode] = useState(false);
   const [useAdvance, setUseAdvance] = useState(true);
+  const [payDebt, setPayDebt] = useState(false);
   const [excessAction, setExcessAction] = useState<'reimburse' | 'advance'>('advance');
   
   // Customer Modal
@@ -99,6 +101,8 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
   // Expense Modal
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
+  const [statsIncludeAvance, setStatsIncludeAvance] = useState<boolean>(false);
+  const [statsIncludeDebt, setStatsIncludeDebt] = useState<boolean>(true);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [mobileTab, setMobileTab] = useState<'products' | 'cart'>('products');
   const [expenseForm, setExpenseForm] = useState({ 
@@ -159,12 +163,38 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
   const cartTotal = cartSubtotal + totalServiceCost;
   const currentAdvanceUsed = (selectedCustomer && useAdvance) ? Math.min(cartTotal, selectedCustomer.advanceBalance) : 0;
   
+  const debtRemains = !!(selectedCustomer && selectedCustomer.outstandingDebt > 0 && (!payDebt || (parseFloat(amountPaidInput) || 0) < cartTotal + selectedCustomer.outstandingDebt));
+
+  // Sync payDebt and useAdvance states when selectedCustomer changes
+  useEffect(() => {
+    if (selectedCustomer) {
+      if (selectedCustomer.outstandingDebt > 0) {
+        setPayDebt(true);
+        setUseAdvance(false);
+      } else {
+        setPayDebt(false);
+        setUseAdvance(true);
+      }
+    } else {
+      setPayDebt(false);
+      setUseAdvance(false);
+    }
+  }, [selectedCustomer]);
+
+  // Prevent holding advance if debt remains
+  useEffect(() => {
+    if (debtRemains && excessAction === 'advance') {
+      setExcessAction('reimburse');
+    }
+  }, [debtRemains, excessAction]);
+
   useEffect(() => {
     if (cartTotal > 0 && !showReceipt) {
-        const toPay = cartTotal - currentAdvanceUsed;
+        const debtToAdd = (selectedCustomer && selectedCustomer.outstandingDebt > 0 && payDebt) ? selectedCustomer.outstandingDebt : 0;
+        const toPay = cartTotal + debtToAdd - currentAdvanceUsed;
         setAmountPaidInput(Math.max(0, toPay).toString());
     }
-  }, [cartTotal, showReceipt, currentAdvanceUsed]);
+  }, [cartTotal, showReceipt, currentAdvanceUsed, payDebt, selectedCustomer]);
 
   // Update cart prices and units when wholesale mode changes
   useEffect(() => {
@@ -204,7 +234,7 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
     }));
   }, [isWholesale, products]);
 
-  const balanceDue = Math.max(0, cartTotal - currentAdvanceUsed - (parseFloat(amountPaidInput) || 0));
+  const balanceDue = Math.max(0, (cartTotal + (selectedCustomer && selectedCustomer.outstandingDebt > 0 && payDebt ? selectedCustomer.outstandingDebt : 0)) - currentAdvanceUsed - (parseFloat(amountPaidInput) || 0));
 
   const getMultiplier = (unit: string) => {
       if (unit === 'Sac 50kg') return 50;
@@ -334,35 +364,68 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
         let newAdvanceCreated = 0;
         let remainingDebt = 0;
         let reimbursement = 0;
+        let debtPaid = 0;
 
-        // Use existing advance if available and cashier decided to use it
-        if (selectedCustomer && useAdvance) {
-            advanceUsed = Math.min(total, selectedCustomer.advanceBalance);
-        }
+        if (selectedCustomer && selectedCustomer.outstandingDebt > 0 && payDebt) {
+            // We are paying off the basket AND the customer's outstanding debt
+            if (rawAmountPaid >= total) {
+                // Basket is fully paid
+                const excess = rawAmountPaid - total;
+                debtPaid = Math.min(excess, selectedCustomer.outstandingDebt);
+                const remainingExcess = excess - debtPaid;
 
-        const amountToPay = total - advanceUsed;
-        const amountPaid = rawAmountPaid;
-
-        if (amountPaid > amountToPay) {
-            if (excessAction === 'advance') {
-                newAdvanceCreated = amountPaid - amountToPay;
-                reimbursement = 0;
+                if (remainingExcess > 0) {
+                    if (excessAction === 'advance') {
+                        newAdvanceCreated = remainingExcess;
+                        reimbursement = 0;
+                    } else {
+                        newAdvanceCreated = 0;
+                        reimbursement = remainingExcess;
+                    }
+                }
+                
+                // Since db.ts updates customer debt as: customer.outstandingDebt + invoice.remainingDebt,
+                // we set remainingDebt to -debtPaid, which will reduce customer.outstandingDebt by debtPaid!
+                remainingDebt = -debtPaid;
             } else {
-                newAdvanceCreated = 0;
-                reimbursement = amountPaid - amountToPay;
+                // Basket is partially paid, old debt remains untouched, and we add new debt
+                remainingDebt = total - rawAmountPaid;
             }
-        } else if (amountPaid < amountToPay) {
-            remainingDebt = amountToPay - amountPaid;
+        } else {
+            // Normal calculation when not paying off old debt or no old debt exists
+            if (selectedCustomer && useAdvance) {
+                advanceUsed = Math.min(total, selectedCustomer.advanceBalance);
+            }
+
+            const amountToPay = total - advanceUsed;
+            const amountPaid = rawAmountPaid;
+
+            if (amountPaid > amountToPay) {
+                if (excessAction === 'advance') {
+                    newAdvanceCreated = amountPaid - amountToPay;
+                    reimbursement = 0;
+                } else {
+                    newAdvanceCreated = 0;
+                    reimbursement = amountPaid - amountToPay;
+                }
+            } else if (amountPaid < amountToPay) {
+                remainingDebt = amountToPay - amountPaid;
+            }
         }
 
         // Requirement: If advance or debt is involved, full customer registration is mandatory
-        if ((advanceUsed > 0 || newAdvanceCreated > 0 || remainingDebt > 0) && !selectedCustomer) {
+        if ((advanceUsed > 0 || newAdvanceCreated > 0 || remainingDebt !== 0 || debtPaid > 0) && !selectedCustomer) {
             notify("Enregistrement complet du client obligatoire pour avance ou dette", "error");
             setIsProcessing(false);
             return;
         }
 
-        let status: 'PAYÉ' | 'PARTIEL' | 'IMPAYÉ' = (amountPaid + advanceUsed) >= total ? 'PAYÉ' : ((amountPaid + advanceUsed) > 0 ? 'PARTIEL' : 'IMPAYÉ');
+        let status: 'PAYÉ' | 'PARTIEL' | 'IMPAYÉ';
+        if (selectedCustomer && selectedCustomer.outstandingDebt > 0 && payDebt) {
+            status = rawAmountPaid >= total ? 'PAYÉ' : (rawAmountPaid > 0 ? 'PARTIEL' : 'IMPAYÉ');
+        } else {
+            status = (rawAmountPaid + advanceUsed) >= total ? 'PAYÉ' : ((rawAmountPaid + advanceUsed) > 0 ? 'PARTIEL' : 'IMPAYÉ');
+        }
 
         const newInvoice: Invoice = {
             id: `FAC-${Date.now().toString().slice(-6)}`,
@@ -387,11 +450,12 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
             }),
             total: total,
             serviceCost: totalServiceCost,
-            amountPaid: amountPaid,
+            amountPaid: rawAmountPaid,
             advanceUsed: advanceUsed,
             reimbursement: reimbursement,
             newAdvanceCreated: newAdvanceCreated,
             remainingDebt: remainingDebt,
+            debtPaid: debtPaid,
             status: status,
             isWholesale: isWholesale,
             sellerName: userName,
@@ -450,7 +514,60 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
             return p;
         });
 
-        await onCheckout(newInvoice, updatedProducts, selectedCustomer || undefined);
+        const updatedPreviousInvoices: Invoice[] = [];
+        if (selectedCustomer && debtPaid > 0) {
+            // Find all unpaid or partial invoices for this customer by checking actual remaining debt
+            const customerInvoices = (invoices || [])
+                .filter(inv => {
+                    if (inv.deleted) return false;
+                    const nameMatch = (inv.customerName || '').toLowerCase().trim() === (selectedCustomer.name || '').toLowerCase().trim();
+                    if (!nameMatch) return false;
+                    const prevInvRemaining = inv.remainingDebt !== undefined 
+                        ? inv.remainingDebt 
+                        : Math.max(0, inv.total - (inv.amountPaid || 0) - (inv.advanceUsed || 0));
+                    return prevInvRemaining > 0;
+                })
+                // Sort by date ascending (oldest first) to pay off oldest debts first
+                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+            let remainingRepayment = debtPaid;
+
+            for (const prevInv of customerInvoices) {
+                if (remainingRepayment <= 0) break;
+
+                // How much is left to pay on this invoice?
+                const prevInvRemaining = prevInv.remainingDebt !== undefined 
+                    ? prevInv.remainingDebt 
+                    : Math.max(0, prevInv.total - (prevInv.amountPaid || 0) - (prevInv.advanceUsed || 0));
+
+                if (prevInvRemaining <= 0) continue;
+
+                const paymentForThisInv = Math.min(remainingRepayment, prevInvRemaining);
+                remainingRepayment -= paymentForThisInv;
+
+                const newAmountPaid = (prevInv.amountPaid || 0) + paymentForThisInv;
+                const newRemainingDebt = Math.max(0, prevInvRemaining - paymentForThisInv);
+                const newStatus = (newAmountPaid + (prevInv.advanceUsed || 0)) >= prevInv.total - 0.01 ? 'PAYÉ' : 'PARTIEL';
+
+                const paymentRecord: Payment = {
+                    id: Date.now().toString() + '-' + Math.random().toString().slice(2, 6),
+                    date: new Date().toISOString(),
+                    amount: paymentForThisInv,
+                    note: `Remboursement via Caisse (${newInvoice.id})`
+                };
+
+                updatedPreviousInvoices.push({
+                    ...prevInv,
+                    provenderieId: prevInv.provenderieId || currentProvenderieId,
+                    amountPaid: newAmountPaid,
+                    remainingDebt: newRemainingDebt,
+                    status: newStatus,
+                    paymentHistory: [...(prevInv.paymentHistory || []), paymentRecord]
+                });
+            }
+        }
+
+        await onCheckout(newInvoice, updatedProducts, selectedCustomer || undefined, updatedPreviousInvoices);
         setShowReceipt(newInvoice);
         setCart([]);
         setCustomerName('Client Comptoir');
@@ -613,7 +730,7 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
         </div>
         
         {/* Hidden Print Content */}
-        <div className="hidden print:block">
+        <div className="print-only">
             <InvoiceTemplate invoice={showReceipt} boutique={boutiques.find(b => b.id === showReceipt.boutique)} provenderie={currentProvenderie} companyName={companyName} />
         </div>
       </div>
@@ -900,11 +1017,18 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            {selectedCustomer.advanceBalance > 0 && (
-                                <label className="flex items-center gap-1 cursor-pointer bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">
-                                    <input type="checkbox" checked={useAdvance} onChange={e => setUseAdvance(e.target.checked)} className="w-2.5 h-2.5 rounded border-emerald-200 bg-white text-emerald-500 focus:ring-0" />
-                                    <span className="text-[8px] text-emerald-600 font-black uppercase tracking-tighter">Utiliser Avance</span>
+                            {selectedCustomer.outstandingDebt > 0 ? (
+                                <label className="flex items-center gap-1 cursor-pointer bg-rose-50 px-2 py-1 rounded-lg border border-rose-100 animate-pulse">
+                                    <input type="checkbox" checked={payDebt} onChange={e => setPayDebt(e.target.checked)} className="w-2.5 h-2.5 rounded border-rose-200 bg-white text-rose-500 focus:ring-0 cursor-pointer" />
+                                    <span className="text-[8px] text-rose-600 font-black uppercase tracking-tighter">Rembourser Dette ({new Intl.NumberFormat('fr-FR').format(selectedCustomer.outstandingDebt)} F)</span>
                                 </label>
+                            ) : (
+                                selectedCustomer.advanceBalance > 0 && (
+                                    <label className="flex items-center gap-1 cursor-pointer bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">
+                                        <input type="checkbox" checked={useAdvance} onChange={e => setUseAdvance(e.target.checked)} className="w-2.5 h-2.5 rounded border-emerald-200 bg-white text-emerald-500 focus:ring-0" />
+                                        <span className="text-[8px] text-emerald-600 font-black uppercase tracking-tighter">Utiliser Avance</span>
+                                    </label>
+                                )
                             )}
                             <button onClick={() => { setSelectedCustomer(null); setCustomerName('Client Comptoir'); }} className="p-1 hover:bg-slate-100 rounded transition-colors">
                                 <X className="w-3 h-3 text-slate-400 hover:text-rose-500" />
@@ -979,8 +1103,15 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
 
              <div className="flex justify-between items-center">
                  <span className="text-slate-400 dark:text-slate-400 text-[10px] font-black uppercase tracking-[0.25em]">Total Net</span>
-                 <span className="text-xl font-black text-slate-900 dark:text-slate-50 tracking-tighter tabular-nums">{new Intl.NumberFormat('fr-FR').format(cartTotal)} F</span>
+                 <span className="text-xl font-black text-slate-900 dark:text-slate-50 tracking-tighter tabular-nums">
+                     {new Intl.NumberFormat('fr-FR').format(cartTotal + (selectedCustomer && selectedCustomer.outstandingDebt > 0 && payDebt ? selectedCustomer.outstandingDebt : 0))} F
+                 </span>
              </div>
+             {selectedCustomer && selectedCustomer.outstandingDebt > 0 && payDebt && (
+                 <div className="text-[9px] text-slate-500 font-bold text-right leading-none">
+                     (Panier: {new Intl.NumberFormat('fr-FR').format(cartTotal)} F + Dette: {new Intl.NumberFormat('fr-FR').format(selectedCustomer.outstandingDebt)} F)
+                 </div>
+             )}
              
              <div className="grid grid-cols-2 gap-2 mt-2">
                 <div className="bg-slate-50 dark:bg-slate-800/20 p-2.5 rounded-2xl border border-slate-150/50 dark:border-slate-800/60">
@@ -1006,15 +1137,19 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
                 </div>
              </div>
 
-             {(parseFloat(amountPaidInput) || 0) > (cartTotal - currentAdvanceUsed) && (
+             {(parseFloat(amountPaidInput) || 0) > (cartTotal + (selectedCustomer && selectedCustomer.outstandingDebt > 0 && payDebt ? selectedCustomer.outstandingDebt : 0) - currentAdvanceUsed) && (
                 <div className="flex items-center justify-between bg-emerald-50 p-2 rounded-xl border border-emerald-100 mt-2 animate-in slide-in-from-bottom-2">
                     <div className="flex flex-col">
                         <span className="text-[8px] font-black text-emerald-600 uppercase">Excédent</span>
-                        <span className="text-xs font-black text-emerald-700">{new Intl.NumberFormat('fr-FR').format((parseFloat(amountPaidInput) || 0) - (cartTotal - currentAdvanceUsed))} F</span>
+                        <span className="text-xs font-black text-emerald-700">
+                            {new Intl.NumberFormat('fr-FR').format((parseFloat(amountPaidInput) || 0) - (cartTotal + (selectedCustomer && selectedCustomer.outstandingDebt > 0 && payDebt ? selectedCustomer.outstandingDebt : 0) - currentAdvanceUsed))} F
+                        </span>
                     </div>
                     <div className="flex gap-1">
                         <button onClick={() => setExcessAction('reimburse')} className={`text-[8px] px-2 py-1 rounded-lg font-black uppercase tracking-tighter transition-all ${excessAction === 'reimburse' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white text-emerald-600 border border-emerald-200'}`}>Rendre</button>
-                        <button onClick={() => setExcessAction('advance')} className={`text-[8px] px-2 py-1 rounded-lg font-black uppercase tracking-tighter transition-all ${excessAction === 'advance' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-blue-600 border border-blue-200'}`}>Avance</button>
+                        {!debtRemains && (
+                            <button onClick={() => setExcessAction('advance')} className={`text-[8px] px-2 py-1 rounded-lg font-black uppercase tracking-tighter transition-all ${excessAction === 'advance' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-blue-600 border border-blue-200'}`}>Avance</button>
+                        )}
                     </div>
                 </div>
              )}
@@ -1119,8 +1254,13 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
                           <div className="text-right">
                               <p className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Total à Encaisser</p>
                               <p className="text-2xl md:text-4xl font-black text-slate-900 tabular-nums tracking-tighter">
-                                {new Intl.NumberFormat('fr-FR').format(cartTotal)} <span className="text-sm md:text-lg text-slate-400">F</span>
+                                {new Intl.NumberFormat('fr-FR').format(cartTotal + (selectedCustomer && selectedCustomer.outstandingDebt > 0 && payDebt ? selectedCustomer.outstandingDebt : 0))} <span className="text-sm md:text-lg text-slate-400">F</span>
                               </p>
+                              {selectedCustomer && selectedCustomer.outstandingDebt > 0 && payDebt && (
+                                  <p className="text-[10px] text-slate-500 font-bold mt-1">
+                                      (Panier: {new Intl.NumberFormat('fr-FR').format(cartTotal)} F + Dette: {new Intl.NumberFormat('fr-FR').format(selectedCustomer.outstandingDebt)} F)
+                                  </p>
+                              )}
                           </div>
                       </div>
 
@@ -1148,12 +1288,12 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
                                   </span>
                               </div>
 
-                              {(parseFloat(amountPaidInput) || 0) > (cartTotal - (selectedCustomer && useAdvance ? Math.min(cartTotal, selectedCustomer.advanceBalance) : 0)) && (
+                              {(parseFloat(amountPaidInput) || 0) > (cartTotal + (selectedCustomer && selectedCustomer.outstandingDebt > 0 && payDebt ? selectedCustomer.outstandingDebt : 0) - (selectedCustomer && useAdvance ? Math.min(cartTotal, selectedCustomer.advanceBalance) : 0)) && (
                                 <div className="pt-3 md:pt-4 mt-3 md:mt-4 border-t border-slate-200 space-y-2 md:space-y-3">
                                   <div className="flex justify-between items-center">
                                     <span className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Trop-perçu</span>
                                     <span className="text-xs md:text-sm font-black text-slate-900 tabular-nums">
-                                      {new Intl.NumberFormat('fr-FR').format((parseFloat(amountPaidInput) || 0) - (cartTotal - (selectedCustomer && useAdvance ? Math.min(cartTotal, selectedCustomer.advanceBalance) : 0)))} F
+                                      {new Intl.NumberFormat('fr-FR').format((parseFloat(amountPaidInput) || 0) - (cartTotal + (selectedCustomer && selectedCustomer.outstandingDebt > 0 && payDebt ? selectedCustomer.outstandingDebt : 0) - (selectedCustomer && useAdvance ? Math.min(cartTotal, selectedCustomer.advanceBalance) : 0)))} F
                                     </span>
                                   </div>
                                   <div className="flex justify-between items-center bg-white p-2 md:p-3 rounded-lg md:rounded-xl border border-slate-100">
@@ -1201,81 +1341,147 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
       )}
 
       {/* Stats Modal */}
-      {showStatsModal && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-2 md:p-4 animate-in fade-in">
-             <div className="bg-white dark:bg-[#121824] rounded-[2.5rem] p-6 md:p-8 w-full max-w-lg shadow-2xl animate-in zoom-in-95 border border-slate-150/50 dark:border-slate-800/80 max-h-[95vh] overflow-y-auto">
-                 <div className="flex justify-between items-center mb-4 md:mb-6">
-                    <h3 className="font-bold text-lg md:text-2xl flex items-center gap-2 md:gap-3 text-gray-900 font-display">
-                        <div className="p-1.5 md:p-2 bg-blue-100 rounded-lg md:rounded-xl text-blue-600">
-                            <TrendingUp className="w-5 h-5 md:w-6 md:h-6"/> 
-                        </div>
-                        Aperçu Caisse
-                    </h3>
-                    <button onClick={() => setShowStatsModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X className="w-5 h-5 text-gray-400"/></button>
-                 </div>
-                 
-                 <div className="space-y-4 md:space-y-6">
-                     <div className="bg-gray-50 p-3 md:p-4 rounded-xl md:rounded-2xl border border-gray-100">
-                        <p className="text-[10px] md:text-xs font-bold text-gray-500 uppercase mb-1">Boutique</p>
-                        <p className="font-bold text-gray-900 text-base md:text-lg">{boutiques.find(b => b.id === selectedBoutique)?.name || selectedBoutique}</p>
-                        <p className="text-[10px] md:text-xs text-gray-400">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                     </div>
+      {showStatsModal && (() => {
+          const todayInvoices = invoices.filter(i => i.boutique === selectedBoutique && new Date(i.date).toDateString() === new Date().toDateString());
+          
+          const totalVentes = todayInvoices.reduce((acc, i) => {
+              let val = i.total;
+              if (!statsIncludeDebt) {
+                  const debt = i.remainingDebt !== undefined ? i.remainingDebt : Math.max(0, i.total - (i.amountPaid || 0) - (i.advanceUsed || 0));
+                  val -= debt;
+              }
+              return acc + val;
+          }, 0);
 
-                     <div className="grid grid-cols-2 gap-3 md:gap-4">
-                        <div className="bg-emerald-50 p-3 md:p-4 rounded-xl md:rounded-2xl border border-emerald-100">
-                            <p className="text-[10px] md:text-xs font-bold text-emerald-600 uppercase mb-1">Total Ventes</p>
-                            <p className="text-lg md:text-2xl font-bold text-emerald-700">
-                                {new Intl.NumberFormat('fr-FR').format(
-                                    invoices
-                                    .filter(i => i.boutique === selectedBoutique && new Date(i.date).toDateString() === new Date().toDateString())
-                                    .reduce((acc, i) => acc + i.total, 0)
-                                )} F
-                            </p>
-                            <p className="text-[10px] md:text-xs text-emerald-500 mt-1">
-                                {invoices.filter(i => i.boutique === selectedBoutique && new Date(i.date).toDateString() === new Date().toDateString()).length} trans.
-                            </p>
-                        </div>
-                        <div className="bg-blue-50 p-3 md:p-4 rounded-xl md:rounded-2xl border border-blue-100">
-                            <p className="text-[10px] md:text-xs font-bold text-blue-600 uppercase mb-1">Espèces</p>
-                            <p className="text-lg md:text-2xl font-bold text-blue-700">
-                                {new Intl.NumberFormat('fr-FR').format(
-                                    invoices
-                                    .filter(i => i.boutique === selectedBoutique && new Date(i.date).toDateString() === new Date().toDateString())
-                                    .reduce((acc, i) => acc + (i.amountPaid - (i.reimbursement || 0)), 0)
-                                )} F
-                            </p>
-                        </div>
-                     </div>
+          const totalEspeces = todayInvoices.reduce((acc, i) => {
+              const base = i.amountPaid - (i.reimbursement || 0);
+              if (statsIncludeAvance) {
+                  return acc + base + (i.advanceUsed || 0);
+              } else {
+                  return acc + base - (i.newAdvanceCreated || 0);
+              }
+          }, 0);
 
-                     <div className="grid grid-cols-2 gap-3 md:gap-4">
-                        <div className="bg-red-50 p-3 md:p-4 rounded-xl md:rounded-2xl border border-red-100">
-                            <p className="text-[10px] md:text-xs font-bold text-red-600 uppercase mb-1">Total Sorties</p>
-                            <p className="text-lg md:text-2xl font-bold text-red-700">
-                                {new Intl.NumberFormat('fr-FR').format(
-                                    expenses
-                                    .filter(e => e.boutique === selectedBoutique && new Date(e.date).toDateString() === new Date().toDateString())
-                                    .reduce((acc, e) => acc + e.amount, 0)
-                                )} F
-                            </p>
-                        </div>
-                        <div className="bg-gray-900 p-3 md:p-4 rounded-xl md:rounded-2xl border border-gray-800 text-white">
-                            <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase mb-1">Solde</p>
-                            <p className="text-lg md:text-2xl font-bold text-white">
-                                {new Intl.NumberFormat('fr-FR').format(
-                                    Math.max(0, (invoices
-                                    .filter(i => i.boutique === selectedBoutique && new Date(i.date).toDateString() === new Date().toDateString())
-                                    .reduce((acc, i) => acc + (i.amountPaid - (i.reimbursement || 0)), 0)) - 
-                                    (expenses
-                                    .filter(e => e.boutique === selectedBoutique && new Date(e.date).toDateString() === new Date().toDateString())
-                                    .reduce((acc, e) => acc + e.amount, 0)))
-                                )} F
-                            </p>
-                        </div>
+          const totalSorties = expenses
+              .filter(e => e.boutique === selectedBoutique && new Date(e.date).toDateString() === new Date().toDateString())
+              .reduce((acc, e) => acc + e.amount, 0);
+
+          const soldeCaisse = Math.max(0, totalEspeces - totalSorties);
+
+          const categoryDataMap = {};
+          todayInvoices.forEach(inv => {
+              inv.items.forEach(item => {
+                  const cat = item.category || 'Non catégorisé';
+                  let itemRevenue = item.price * item.quantity;
+                  if (!statsIncludeDebt) {
+                      const ratio = inv.total > 0 ? (inv.total - (inv.remainingDebt || 0)) / inv.total : 0;
+                      itemRevenue *= ratio;
+                  }
+                  categoryDataMap[cat] = (categoryDataMap[cat] || 0) + itemRevenue;
+              });
+          });
+          const categoryChartData = Object.entries(categoryDataMap).map(([name, value]) => ({
+              name,
+              Montant: value
+          }));
+
+          return (
+              <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-2 md:p-4 animate-in fade-in">
+                 <div className="bg-white dark:bg-[#121824] rounded-[2.5rem] p-6 md:p-8 w-full max-w-lg shadow-2xl animate-in zoom-in-95 border border-slate-150/50 dark:border-slate-800/80 max-h-[95vh] overflow-y-auto">
+                     <div className="flex justify-between items-center mb-4 md:mb-6">
+                        <h3 className="font-bold text-lg md:text-2xl flex items-center gap-2 md:gap-3 text-gray-900 font-display">
+                            <div className="p-1.5 md:p-2 bg-blue-100 rounded-lg md:rounded-xl text-blue-600">
+                                <TrendingUp className="w-5 h-5 md:w-6 md:h-6"/> 
+                            </div>
+                            Aperçu Caisse
+                        </h3>
+                        <button onClick={() => setShowStatsModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X className="w-5 h-5 text-gray-400"/></button>
+                     </div>
+                     
+                     <div className="space-y-4 md:space-y-6">
+                         <div className="bg-gray-50 p-3 md:p-4 rounded-xl md:rounded-2xl border border-gray-100">
+                            <p className="text-[10px] md:text-xs font-bold text-gray-500 uppercase mb-1">Boutique</p>
+                            <p className="font-bold text-gray-900 text-base md:text-lg">{boutiques.find(b => b.id === selectedBoutique)?.name || selectedBoutique}</p>
+                            <p className="text-[10px] md:text-xs text-gray-400">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                         </div>
+
+                         {/* Toggles */}
+                         <div className="grid grid-cols-2 gap-3 p-3 bg-gray-50 rounded-2xl border border-gray-100">
+                             <label className="flex items-center gap-2 cursor-pointer select-none">
+                                 <input 
+                                     type="checkbox" 
+                                     checked={statsIncludeDebt} 
+                                     onChange={e => setStatsIncludeDebt(e.target.checked)} 
+                                     className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-0" 
+                                 />
+                                 <span className="text-xs font-bold text-gray-700">Inclure dettes</span>
+                             </label>
+                             <label className="flex items-center gap-2 cursor-pointer select-none">
+                                 <input 
+                                     type="checkbox" 
+                                     checked={statsIncludeAvance} 
+                                     onChange={e => setStatsIncludeAvance(e.target.checked)} 
+                                     className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-0" 
+                                 />
+                                 <span className="text-xs font-bold text-gray-700">Inclure avances</span>
+                             </label>
+                         </div>
+
+                         <div className="grid grid-cols-2 gap-3 md:gap-4">
+                            <div className="bg-emerald-50 p-3 md:p-4 rounded-xl md:rounded-2xl border border-emerald-100">
+                                <p className="text-[10px] md:text-xs font-bold text-emerald-600 uppercase mb-1">Total Ventes</p>
+                                <p className="text-lg md:text-2xl font-bold text-emerald-700">
+                                    {new Intl.NumberFormat('fr-FR').format(totalVentes)} F
+                                </p>
+                                <p className="text-[10px] md:text-xs text-emerald-500 mt-1">
+                                    {todayInvoices.length} trans.
+                                </p>
+                            </div>
+                            <div className="bg-blue-50 p-3 md:p-4 rounded-xl md:rounded-2xl border border-blue-100">
+                                <p className="text-[10px] md:text-xs font-bold text-blue-600 uppercase mb-1">Espèces</p>
+                                <p className="text-lg md:text-2xl font-bold text-blue-700">
+                                    {new Intl.NumberFormat('fr-FR').format(totalEspeces)} F
+                                </p>
+                            </div>
+                         </div>
+
+                         <div className="grid grid-cols-2 gap-3 md:gap-4">
+                            <div className="bg-red-50 p-3 md:p-4 rounded-xl md:rounded-2xl border border-red-100">
+                                <p className="text-[10px] md:text-xs font-bold text-red-600 uppercase mb-1">Total Sorties</p>
+                                <p className="text-lg md:text-2xl font-bold text-red-700">
+                                    {new Intl.NumberFormat('fr-FR').format(totalSorties)} F
+                                </p>
+                            </div>
+                            <div className="bg-gray-900 p-3 md:p-4 rounded-xl md:rounded-2xl border border-gray-800 text-white">
+                                <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase mb-1">Solde</p>
+                                <p className="text-lg md:text-2xl font-bold text-white">
+                                    {new Intl.NumberFormat('fr-FR').format(soldeCaisse)} F
+                                </p>
+                            </div>
+                         </div>
+
+                         {categoryChartData.length > 0 && (
+                             <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                                 <p className="text-[10px] md:text-xs font-bold text-gray-500 uppercase mb-3">Ventes par Catégorie</p>
+                                 <div className="h-[150px] w-full">
+                                     <ResponsiveContainer width="100%" height="100%">
+                                         <BarChart data={categoryChartData}>
+                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                                             <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#6B7280' }} axisLine={false} tickLine={false} />
+                                             <YAxis tick={{ fontSize: 9, fill: '#6B7280' }} width={30} axisLine={false} tickLine={false} />
+                                             <Tooltip formatter={(value) => `${value.toLocaleString()} F`} contentStyle={{ fontSize: 10, borderRadius: 8 }} />
+                                             <Bar dataKey="Montant" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                                         </BarChart>
+                                     </ResponsiveContainer>
+                                 </div>
+                             </div>
+                         )}
                      </div>
                  </div>
-             </div>
-          </div>
-      )}
+              </div>
+          );
+      })()}
+
 
       {/* Expense Modal */}
       {showExpenseModal && (

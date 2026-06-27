@@ -140,9 +140,16 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({ invoice, bouti
       {/* Financial Summary Section */}
       <div className="border-t border-black border-dashed pt-2 space-y-1 text-[10px]">
         <div className="flex justify-between font-bold text-xs">
-          <span>Total Net:</span>
+          <span>Total Net (Panier):</span>
           <span>{formatCurrency(invoice.total)}</span>
         </div>
+
+        {invoice.debtPaid !== undefined && invoice.debtPaid > 0 && (
+          <div className="flex justify-between font-bold text-rose-700">
+            <span>Dette Réglée:</span>
+            <span>+ {formatCurrency(invoice.debtPaid)}</span>
+          </div>
+        )}
 
         {(invoice.serviceCost || 0) > 0 && (
           <div className="flex justify-between">

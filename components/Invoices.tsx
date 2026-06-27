@@ -356,7 +356,7 @@ export const Invoices: React.FC<InvoicesProps> = ({ invoices, products, onUpdate
       };
 
       const customer = customers.find(c => c.name === selectedInvoice.customerName);
-      await processPaymentRecovery(updatedInvoice, customer);
+      await processPaymentRecovery(updatedInvoice, customer, newAdvanceCreated);
       onUpdateInvoice(updatedInvoice);
       setSelectedInvoice(updatedInvoice); // Update local view
       setIsAddingPayment(false);
@@ -502,8 +502,7 @@ export const Invoices: React.FC<InvoicesProps> = ({ invoices, products, onUpdate
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                     {paginatedInvoices.map((inv, idx) => {
-                        const customer = customers.find(c => c.name === inv.customerName);
-                        const remainingAdvance = customer ? customer.advanceBalance : 0;
+                        const remainingAdvance = inv.newAdvanceCreated || 0;
                         return (
                         <tr 
                             key={`${inv.id}-${idx}`} 
@@ -583,8 +582,7 @@ export const Invoices: React.FC<InvoicesProps> = ({ invoices, products, onUpdate
              {/* Mobile Card List */}
              <div className="md:hidden divide-y divide-gray-100">
                 {paginatedInvoices.map((inv, idx) => {
-                    const customer = customers.find(c => c.name === inv.customerName);
-                    const remainingAdvance = customer ? customer.advanceBalance : 0;
+                    const remainingAdvance = inv.newAdvanceCreated || 0;
                     return (
                         <div 
                             key={`${inv.id}-${idx}`} 
@@ -644,7 +642,7 @@ export const Invoices: React.FC<InvoicesProps> = ({ invoices, products, onUpdate
       </div>
 
       {/* Printable Invoice Template */}
-      <div className="hidden print:block">
+      <div className="print-only">
         {selectedInvoice && <InvoiceTemplate invoice={selectedInvoice} boutique={boutiques.find(b => b.id === selectedInvoice.boutique)} provenderie={currentProvenderie} companyName={companyName} />}
       </div>
       </>
@@ -681,7 +679,7 @@ export const Invoices: React.FC<InvoicesProps> = ({ invoices, products, onUpdate
                     </td>
                     <td className="px-6 py-4 text-gray-500">{customer.phone || '-'}</td>
                     <td className="px-6 py-4 text-right font-bold text-rose-600">
-                      {(customerDebtsMap[(customer.name || '').toLowerCase().trim()] || 0) > 0 ? `${(customerDebtsMap[(customer.name || '').toLowerCase().trim()] || 0).toLocaleString()} FCFA` : '-'}
+                      {customer.outstandingDebt > 0 ? `${customer.outstandingDebt.toLocaleString()} FCFA` : '-'}
                     </td>
                     <td className="px-6 py-4 text-right font-bold text-blue-600">
                       {customer.advanceBalance > 0 ? `${customer.advanceBalance.toLocaleString()} FCFA` : '-'}
@@ -731,7 +729,7 @@ export const Invoices: React.FC<InvoicesProps> = ({ invoices, products, onUpdate
                   </div>
                   <div>
                     <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">Dette Restante</p>
-                    <p className="text-2xl font-black text-rose-600">{(customerDebtsMap[(selectedCustomer.name || '').toLowerCase().trim()] || 0).toLocaleString()} FCFA</p>
+                    <p className="text-2xl font-black text-rose-600">{selectedCustomer.outstandingDebt.toLocaleString()} FCFA</p>
                   </div>
                 </div>
                 <div className="bg-white p-6 rounded-[2rem] border border-blue-100 shadow-sm flex items-center gap-4">
@@ -757,7 +755,7 @@ export const Invoices: React.FC<InvoicesProps> = ({ invoices, products, onUpdate
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {invoices.filter(inv => inv.customerName === selectedCustomer.name && (userBoutique === 'Toutes' || inv.boutique === userBoutique)).map(inv => (
+                    {invoices.filter(inv => inv.customerName && selectedCustomer.name && inv.customerName.toLowerCase().trim() === selectedCustomer.name.toLowerCase().trim() && (userBoutique === 'Toutes' || inv.boutique === userBoutique)).map(inv => (
                       <tr 
                         key={inv.id} 
                         className="hover:bg-slate-50/50 transition-colors cursor-pointer"
@@ -943,6 +941,12 @@ export const Invoices: React.FC<InvoicesProps> = ({ invoices, products, onUpdate
                                           <div>
                                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Montant Épargné</p>
                                               <p className="text-lg font-black text-blue-600">{(selectedInvoice.newAdvanceCreated || 0).toLocaleString()} F</p>
+                                          </div>
+                                      )}
+                                      {selectedInvoice.debtPaid !== undefined && selectedInvoice.debtPaid > 0 && (
+                                          <div>
+                                              <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest mb-1">Dette Réglée</p>
+                                              <p className="text-lg font-black text-rose-600">{(selectedInvoice.debtPaid || 0).toLocaleString()} F</p>
                                           </div>
                                       )}
                                   </div>

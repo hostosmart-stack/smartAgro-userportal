@@ -390,7 +390,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
       </div>
 
       {activeTab === 'overview' && (
-      <div className="w-full">
+      <div className="w-full space-y-6">
       {/* --- KPI CARDS (Minimalist) --- */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <KpiCard 
@@ -432,7 +432,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
       </div>
 
       {/* --- CHARTS SECTION --- */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in fade-in">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in">
            {/* STOCK VALUATION PIE CHART */}
            <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow duration-300">
               <div className="flex items-center gap-3 mb-6">
@@ -503,7 +503,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
            </div>
 
            {/* STOCK VALUATION TABLE */}
-           <div className="bg-white p-4 md:p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow duration-300">
+           <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow duration-300">
               <div className="flex items-center gap-3 mb-6">
                   <div className="p-2 bg-emerald-50 rounded-xl">
                       <Package className="w-5 h-5 text-emerald-600" />
@@ -633,7 +633,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
            </div>
 
            {/* PROFIT TABLE */}
-           <div className="bg-white p-4 md:p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow duration-300">
+           <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow duration-300">
               <div className="flex items-center gap-3 mb-6">
                   <div className="p-2 bg-amber-50 rounded-xl">
                       <DollarSign className="w-5 h-5 text-amber-600" />
@@ -725,21 +725,19 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
                             const grouped: Record<string, { items: any[], catTotal: number }> = {};
                             let grandTotal = 0;
                             
-                            filteredProducts.forEach(p => {
-                                const cat = p.category || 'Autres';
+                            stockValuation.forEach(item => {
+                                const cat = item.category || 'Autres';
                                 if (!grouped[cat]) grouped[cat] = { items: [], catTotal: 0 };
                                 
-                                const stock = isSuperOrAdmin && boutiqueFilter === 'all' 
-                                    ? ((p.stock || 0) + Object.values(p.boutiqueStock || {}).reduce((a, b) => a + b, 0))
-                                    : (boutiqueFilter === 'all' ? (p.stock || 0) : (p.boutiqueStock?.[boutiqueFilter] || 0));
-                                
-                                const cost = p.costPrice || 0;
-                                const value = stock * cost;
-                                
-                                if (stock > 0) {
-                                    grouped[cat].items.push({ name: p.name, stock, cost, value });
-                                    grouped[cat].catTotal += value;
-                                    grandTotal += value;
+                                if (item.stock > 0) {
+                                    grouped[cat].items.push({ 
+                                        name: item.variantName ? `${item.name} - ${item.variantName}` : item.name, 
+                                        stock: item.stock, 
+                                        cost: item.unitCost, 
+                                        value: item.totalValue 
+                                    });
+                                    grouped[cat].catTotal += item.totalValue;
+                                    grandTotal += item.totalValue;
                                 }
                             });
                             

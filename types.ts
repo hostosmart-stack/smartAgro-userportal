@@ -37,6 +37,7 @@ export interface ProductVariant {
   costPrice?: number;
   stock?: number;
   boutiqueStock?: { [key: string]: number };
+  lowStockThreshold?: number;
 }
 
 export interface ProductIngredient {
@@ -94,6 +95,7 @@ export interface Invoice {
   reimbursement: number;
   newAdvanceCreated: number;
   remainingDebt: number;
+  debtPaid?: number;
   description?: string; // Note for the invoice (e.g. "Formule Finition")
   status: 'PAYÉ' | 'PARTIEL' | 'IMPAYÉ';
   isWholesale?: boolean;

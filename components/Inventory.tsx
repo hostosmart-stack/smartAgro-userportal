@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Product, Category, StockMovement, ProductVariant, Boutique } from '../types';
-import { Search, Plus, Edit2, Trash2, Save, Filter, Package, FlaskConical, X, RefreshCw, History, Tag, TrendingUp, Wallet, Coins, Scale, Loader2, Factory, ScrollText, Printer, CornerDownRight, ArrowRightLeft, ChevronDown } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Save, Filter, Package, FlaskConical, X, RefreshCw, History, Tag, TrendingUp, Wallet, Coins, Scale, Loader2, Factory, ScrollText, Printer, CornerDownRight, ArrowRightLeft, ChevronDown, CheckCircle } from 'lucide-react';
 import { saveProduct, deleteProduct, clearAllFormulas } from '../services/db';
 import { useNotifications } from './ui/Notifications';
 import { formatStock } from '../utils';
@@ -49,6 +49,12 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [stockAssignmentModal, setStockAssignmentModal] = useState<{
+    isOpen: boolean;
+    existingStock: number;
+    variants: ProductVariant[];
+    assignedStocks: { [key: string]: number };
+  } | null>(null);
 
   // Forms
   const [editForm, setEditForm] = useState<Partial<Product>>({});
@@ -69,6 +75,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
   const [variantPrice, setVariantPrice] = useState('');
   const [variantWholesalePrice, setVariantWholesalePrice] = useState('');
   const [variantCostPrice, setVariantCostPrice] = useState('');
+  const [variantLowStockThreshold, setVariantLowStockThreshold] = useState('');
 
   // Mixing State
   const [isMixing, setIsMixing] = useState(false);
@@ -131,6 +138,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
             setVariantPrice(variant.price.toString());
             setVariantWholesalePrice(variant.wholesalePrice?.toString() || '');
             setVariantCostPrice(variant.costPrice?.toString() || '');
+            setVariantLowStockThreshold(variant.lowStockThreshold?.toString() || '');
         }
     } else {
         setIsEditingVariant(false);
@@ -138,6 +146,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
         setVariantPrice('');
         setVariantWholesalePrice('');
         setVariantCostPrice('');
+        setVariantLowStockThreshold('');
     }
   };
 
@@ -217,12 +226,13 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
           // Find index using the ORIGINAL name to support renaming
           const existingIndex = updatedVariants.findIndex(v => (v.name || '').toLowerCase() === (originalVariantName || '').toLowerCase());
           
-           const newVariant: ProductVariant = {
+            const newVariant: ProductVariant = {
             name: trimmedName,
             price: price,
             wholesalePrice: variantWholesalePrice ? parseFloat(variantWholesalePrice) : undefined,
             costPrice: variantCostPrice ? parseFloat(variantCostPrice) : undefined,
-            stock: existingIndex >= 0 ? updatedVariants[existingIndex].stock : 0
+            stock: existingIndex >= 0 ? updatedVariants[existingIndex].stock : 0,
+            lowStockThreshold: variantLowStockThreshold ? parseFloat(variantLowStockThreshold) : undefined
           };
 
           if (existingIndex >= 0) {
@@ -265,6 +275,32 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
         notify("Produit créé avec succès", "success");
         setIsAdding(false);
       } else if (editingId) {
+        const originalProduct = products.find(p => p.id === editingId);
+        const originallyHasNoVariants = !originalProduct?.variants || originalProduct.variants.length === 0;
+        const nowHasVariants = editForm.variants && editForm.variants.length > 0;
+        const hasExistingStock = originalProduct && originalProduct.stock > 0;
+
+        if (originallyHasNoVariants && nowHasVariants && hasExistingStock) {
+          const currentVariantStocksSum = editForm.variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+          if (currentVariantStocksSum !== originalProduct.stock) {
+            const initialAssignments: { [key: string]: number } = {};
+            editForm.variants.forEach(v => {
+              initialAssignments[v.name] = 0;
+            });
+            if (editForm.variants.length === 1) {
+              initialAssignments[editForm.variants[0].name] = originalProduct.stock;
+            }
+            setStockAssignmentModal({
+              isOpen: true,
+              existingStock: originalProduct.stock,
+              variants: editForm.variants,
+              assignedStocks: initialAssignments
+            });
+            setIsSubmitting(false);
+            return;
+          }
+        }
+
         const updated = { 
             ...editForm,
             name: editForm.name.trim(),
@@ -276,6 +312,41 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
       }
     } catch (e) {
       notify("Erreur lors de l'enregistrement", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleConfirmStockAssignment = async () => {
+    if (!stockAssignmentModal || !editingId) return;
+    const { existingStock, assignedStocks, variants } = stockAssignmentModal;
+    
+    const sumAssigned = Object.values(assignedStocks).reduce((sum, s) => sum + s, 0);
+    if (Math.abs(sumAssigned - existingStock) > 0.0001) {
+      notify(`La somme des stocks attribués (${sumAssigned}) doit être exactement égale au stock existant (${existingStock})`, "error");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const updatedVariants = variants.map(v => ({
+        ...v,
+        stock: assignedStocks[v.name] || 0
+      }));
+
+      const updated = {
+        ...editForm,
+        name: editForm.name.trim(),
+        variants: updatedVariants,
+        provenderieId: editForm.provenderieId || currentProvenderieId
+      } as Product;
+
+      await saveProduct(updated);
+      notify("Modifications enregistrées avec répartition du stock", "success");
+      setStockAssignmentModal(null);
+      setEditingId(null);
+    } catch (e) {
+      notify("Erreur lors de la répartition", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -326,7 +397,8 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
       price: priceNum,
       wholesalePrice: variantWholesalePrice ? parseFloat(variantWholesalePrice) : undefined,
       costPrice: variantCostPrice ? parseFloat(variantCostPrice) : undefined,
-      stock: existingIndex >= 0 ? currentVariants[existingIndex].stock : 0
+      stock: existingIndex >= 0 ? currentVariants[existingIndex].stock : 0,
+      lowStockThreshold: variantLowStockThreshold ? parseFloat(variantLowStockThreshold) : undefined
     };
 
     let updatedVariants;
@@ -342,6 +414,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
     setVariantPrice('');
     setVariantWholesalePrice('');
     setVariantCostPrice('');
+    setVariantLowStockThreshold('');
   };
 
   const removeVariant = (index: number) => {
@@ -1067,15 +1140,27 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
                                    <tbody className="divide-y divide-gray-100">
                                       {mixIngredients.map((item, idx) => {
                                          const requiredWeight = item.weight * ((productionUnit === 'tonnes' ? targetProductionWeight * 1000 : targetProductionWeight) / mixTotalWeight);
-                                         const hasEnoughStock = (item.product.stock || 0) >= requiredWeight;
+                                         let currentStock = 0;
+                                          if (item.variantName) {
+                                              const v = item.product.variants?.find(v => v.name === item.variantName);
+                                              currentStock = v?.stock || 0;
+                                          } else {
+                                              currentStock = item.product.stock || 0;
+                                          }
+                                          const hasEnoughStock = currentStock >= requiredWeight;
                                          return (
-                                         <tr key={idx}>
-                                            <td className="p-2 md:p-3 font-medium text-gray-900">{item.product.name}</td>
+                                         <tr key={idx} className={hasEnoughStock ? '' : 'bg-red-50/70 border-l-4 border-red-500'}>
+                                            <td className="p-2 md:p-3 font-medium text-gray-900">{item.product.name}{item.variantName ? ` - ${item.variantName}` : ''}</td>
                                             <td className={`p-2 md:p-3 text-right ${hasEnoughStock ? 'text-gray-500' : 'text-red-500 font-bold'}`}>
-                                                {formatStock(item.product.stock || 0)}
+                                                {formatStock(currentStock)}
                                             </td>
                                             <td className="p-2 md:p-3 text-right font-bold text-farm-700">{requiredWeight.toFixed(1)}</td>
-                                            <td className="p-2 md:p-3 text-right text-gray-400">{((item.product.costPrice || 0) * requiredWeight).toFixed(0)}</td>
+                                            <td className="p-2 md:p-3 text-right text-gray-400">
+                                                {((item.variantName 
+                                                    ? (item.product.variants?.find(v => v.name === item.variantName)?.costPrice || item.product.costPrice || item.product.price || 0)
+                                                    : (item.product.costPrice || item.product.price || 0)
+                                                ) * requiredWeight).toFixed(0)} F
+                                            </td>
                                          </tr>
                                          );
                                       })}
@@ -1119,15 +1204,17 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
                         </div>
                         <div className="flex-1 overflow-y-auto p-4 md:p-6">
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {existingFormulas.map(f => (
-                                    <div key={f.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all group">
+                                {existingFormulas.map(f => {
+                                    const isLowStock = f.stock <= (f.lowStockThreshold || 5);
+                                    return (
+                                    <div key={f.id} className={`p-4 rounded-xl border transition-all group ${isLowStock ? 'bg-red-50/70 border-red-300 shadow-sm hover:shadow-md' : 'bg-white border-gray-200 shadow-sm hover:shadow-md'}`}>
                                         <div className="flex justify-between items-start mb-3">
                                             <div className="min-w-0">
                                                 <h4 className="font-bold text-gray-900 text-base md:text-lg truncate">{f.name}</h4>
-                                                <span className="text-[10px] md:text-xs font-mono text-gray-500">{formatStock(f.stock)} {f.unit} {t('inventory.in_stock')}</span>
+                                                <span className={`text-[10px] md:text-xs font-mono font-bold ${isLowStock ? 'text-red-600' : 'text-gray-500'}`}>{formatStock(f.stock)} {f.unit} {t('inventory.in_stock')}</span>
                                             </div>
-                                            <div className="bg-gray-100 p-2 rounded-lg group-hover:bg-farm-50 transition-colors shrink-0">
-                                                <FlaskConical className="w-4 h-4 md:w-5 md:h-5 text-gray-400 group-hover:text-farm-500"/>
+                                            <div className={`p-2 rounded-lg transition-colors shrink-0 ${isLowStock ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-400 group-hover:bg-farm-50 group-hover:text-farm-500'}`}>
+                                                <FlaskConical className="w-4 h-4 md:w-5 md:h-5"/>
                                             </div>
                                         </div>
 
@@ -1160,7 +1247,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
                                             </button>
                                         </div>
                                     </div>
-                                ))}
+                                ); })}
                                 {existingFormulas.length === 0 && (
                                     <div className="col-span-full text-center py-10 text-gray-400">
                                         {t('inventory.no_formulas')}
@@ -1244,8 +1331,8 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
                                         </thead>
                                         <tbody className="divide-y divide-gray-100">
                                         {mixIngredients.map(item => (
-                                            <tr key={item.product.id} className="hover:bg-gray-50">
-                                            <td className="px-2 md:px-3 py-2 font-medium text-gray-900 truncate max-w-[100px] md:max-w-none">{item.product.name}</td>
+                                            <tr key={`${item.product.id}-${item.variantName || 'default'}`} className="hover:bg-gray-50">
+                                            <td className="px-2 md:px-3 py-2 font-medium text-gray-900 truncate max-w-[100px] md:max-w-none">{item.product.name}{item.variantName ? ` - ${item.variantName}` : ''}</td>
                                             <td className="px-2 md:px-3 py-2 text-right">
                                                 <input 
                                                 type="number" 
@@ -1256,7 +1343,10 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
                                                 />
                                             </td>
                                             <td className="px-2 md:px-3 py-2 text-right text-gray-400 hidden sm:table-cell">
-                                                {(item.weight * (item.product.costPrice || item.product.price)).toFixed(0)}
+                                                {(item.weight * (item.variantName 
+                                                    ? (item.product.variants?.find(v => v.name === item.variantName)?.costPrice || item.product.costPrice || item.product.price || 0)
+                                                    : (item.product.costPrice || item.product.price || 0)
+                                                )).toFixed(0)} F
                                             </td>
                                             <td className="px-2 md:px-3 py-2 text-right">
                                                 <button onClick={() => removeIngredient(item.product.id, item.variantName)} className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50"><X className="w-4 h-4" /></button>
@@ -1385,9 +1475,14 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
                                     const requiredWeight = item.weight * ((productionUnit === 'tonnes' ? targetProductionWeight * 1000 : targetProductionWeight) / mixTotalWeight);
                                     return (
                                         <tr key={idx} className="border-b border-gray-100">
-                                            <td className="py-2 px-3">{item.product.name}</td>
+                                            <td className="py-2 px-3">{item.product.name}{item.variantName ? ` - ${item.variantName}` : ''}</td>
                                             <td className="py-2 px-3 text-right font-mono">{requiredWeight.toFixed(2)}</td>
-                                            <td className="py-2 px-3 text-right font-mono">{((item.product.costPrice || 0) * requiredWeight).toFixed(0)} F</td>
+                                            <td className="py-2 px-3 text-right font-mono">
+                                                {((item.variantName 
+                                                    ? (item.product.variants?.find(v => v.name === item.variantName)?.costPrice || item.product.costPrice || item.product.price || 0)
+                                                    : (item.product.costPrice || item.product.price || 0)
+                                                ) * requiredWeight).toFixed(0)} F
+                                            </td>
                                         </tr>
                                     );
                                 })}
@@ -1601,99 +1696,103 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
                 </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-                {filteredProducts.map((product) => (
-                <React.Fragment key={product.id}>
-                    <tr className="hover:bg-gray-50/80 transition-colors group">
-                        <td className="px-6 py-4">
-                           <div className="flex items-center gap-4">
-                               <div className={`p-3 rounded-xl shadow-sm ${product.category === Category.RAW_MATERIALS ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'}`}>
-                                   <Package className="w-5 h-5" />
-                               </div>
-                               <div>
-                                    <div className="font-bold text-gray-900 text-base">{product.name}</div>
-                                    <div className="text-xs font-medium text-gray-400 mt-0.5">{product.category}</div>
-                               </div>
-                           </div>
-                        </td>
-                        <td className="px-6 py-4 font-mono text-sm text-blue-600">
-                            {(!product.variants || product.variants.length === 0) ? (
-                                product.costPrice ? new Intl.NumberFormat('fr-FR').format(product.costPrice) : '-'
-                            ) : (
-                                <span className="text-gray-300">-</span>
-                            )}
-                        </td>
-                        <td className="px-6 py-4 font-mono text-sm text-amber-600">
-                            {(!product.variants || product.variants.length === 0) ? (
-                                product.wholesalePrice ? new Intl.NumberFormat('fr-FR').format(product.wholesalePrice) : '-'
-                            ) : (
-                                <span className="text-gray-300">-</span>
-                            )}
-                        </td>
-                        <td className="px-6 py-4 font-bold text-gray-900 font-mono text-base">
-                            {(!product.variants || product.variants.length === 0) ? (
-                                <>
-                                    {new Intl.NumberFormat('fr-FR').format(product.price)} <span className="text-xs text-gray-400 font-sans font-normal">FCFA</span>
-                                </>
-                            ) : (
-                                <span className="text-xs text-gray-400 italic">{t('inventory.variants')}</span>
-                            )}
-                        </td>
-                        <td className="px-6 py-4">
-                            {(!product.variants || product.variants.length === 0) ? (
-                                <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold border ${(isMainBoutique ? (product.stock || 0) : (product.boutiqueStock?.[userBoutique] || 0)) <= (product.lowStockThreshold || 5) ? 'bg-red-50 text-red-600 border-red-100 animate-pulse' : 'bg-gray-50 text-gray-700 border-gray-200'}`}>
-                                    {formatStock(isMainBoutique ? (product.stock || 0) : (product.boutiqueStock?.[userBoutique] || 0))} {product.unit}
-                                </span>
-                            ) : (
-                                <span className="text-xs text-gray-400">-</span>
-                            )}
-                        </td>
-                        <td className="px-2 py-4 text-right">
-                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                 {/* Only allow restock on main item if it has no variants */}
-                                 {(!product.variants || product.variants.length === 0) && (
-                                     <>
-                                         {isMainBoutique && (
-                                             <button onClick={() => {
-                                                 if (onTransferProduct) {
-                                                     onTransferProduct(product.id);
-                                                 } else {
-                                                     onNavigate?.('transfers');
-                                                 }
-                                             }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg border border-transparent hover:border-blue-200 transition-all" title="Transférer">
-                                                 <ArrowRightLeft className="w-4 h-4" />
-                                             </button>
-                                         )}
-                                         {userBoutique !== 'Boutique 2' && (
-                                             <button onClick={() => openRestockModal(product)} className="p-2 text-green-600 hover:bg-green-50 rounded-lg border border-transparent hover:border-green-200 transition-all" title={t('inventory.restock')}>
-                                                 <RefreshCw className="w-4 h-4" />
-                                             </button>
-                                         )}
-                                     </>
-                                 )}
-                                <button onClick={() => setViewingProductId(product.id)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg border border-transparent hover:border-blue-200 transition-all" title={t('common.view')}>
-                                    <TrendingUp className="w-4 h-4" />
-                                </button>
-                                <button onClick={() => handleEditClick(product)} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg border border-transparent hover:border-gray-200 transition-all" title={t('common.edit')}>
-                                    <Edit2 className="w-4 h-4" />
-                                </button>
-                                <button onClick={() => handleDelete(product)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-200 transition-all" title={t('common.delete')}>
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    {/* Variants Sub-rows */}
-                    {product.variants?.map((variant, idx) => (
-                        <tr key={`${product.id}-v-${idx}`} className="bg-gray-50/30">
-                            <td className="px-6 py-3 pl-14">
-                                <div className="flex items-center gap-3 text-gray-600">
-                                    <CornerDownRight className="w-4 h-4 text-gray-400" />
-                                    <span className="text-sm font-semibold">{variant.name}</span>
-                                </div>
-                            </td>
-                            <td className="px-6 py-3 font-mono text-xs text-blue-600">
-                                {variant.costPrice ? new Intl.NumberFormat('fr-FR').format(variant.costPrice) : '-'}
-                            </td>
+                {filteredProducts.map((product) => {
+                  const isLowStock = (!product.variants || product.variants.length === 0) && ((isMainBoutique ? (product.stock || 0) : (product.boutiqueStock?.[userBoutique] || 0)) <= (product.lowStockThreshold || 5));
+                  return (
+                  <React.Fragment key={product.id}>
+                      <tr className={`transition-colors group ${isLowStock ? 'bg-red-50/70 border-l-4 border-red-500 hover:bg-red-100/50' : 'hover:bg-gray-50/80'}`}>
+                          <td className="px-6 py-4">
+                             <div className="flex items-center gap-4">
+                                 <div className={`p-3 rounded-xl shadow-sm ${product.category === Category.RAW_MATERIALS ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'}`}>
+                                     <Package className="w-5 h-5" />
+                                 </div>
+                                 <div>
+                                      <div className="font-bold text-gray-900 text-base">{product.name}</div>
+                                      <div className="text-xs font-medium text-gray-400 mt-0.5">{product.category}</div>
+                                 </div>
+                             </div>
+                          </td>
+                          <td className="px-6 py-4 font-mono text-sm text-blue-600">
+                              {(!product.variants || product.variants.length === 0) ? (
+                                  product.costPrice ? new Intl.NumberFormat('fr-FR').format(product.costPrice) : '-'
+                              ) : (
+                                  <span className="text-gray-300">-</span>
+                              )}
+                          </td>
+                          <td className="px-6 py-4 font-mono text-sm text-amber-600">
+                              {(!product.variants || product.variants.length === 0) ? (
+                                  product.wholesalePrice ? new Intl.NumberFormat('fr-FR').format(product.wholesalePrice) : '-'
+                              ) : (
+                                  <span className="text-gray-300">-</span>
+                              )}
+                          </td>
+                          <td className="px-6 py-4 font-bold text-gray-900 font-mono text-base">
+                              {(!product.variants || product.variants.length === 0) ? (
+                                  <>
+                                      {new Intl.NumberFormat('fr-FR').format(product.price)} <span className="text-xs text-gray-400 font-sans font-normal">FCFA</span>
+                                  </>
+                              ) : (
+                                  <span className="text-xs text-gray-400 italic">{t('inventory.variants')}</span>
+                              )}
+                          </td>
+                          <td className="px-6 py-4">
+                              {(!product.variants || product.variants.length === 0) ? (
+                                  <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold border ${(isMainBoutique ? (product.stock || 0) : (product.boutiqueStock?.[userBoutique] || 0)) <= (product.lowStockThreshold || 5) ? 'bg-red-50 text-red-600 border-red-100 animate-pulse' : 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                                      {formatStock(isMainBoutique ? (product.stock || 0) : (product.boutiqueStock?.[userBoutique] || 0))} {product.unit}
+                                  </span>
+                              ) : (
+                                  <span className="text-xs text-gray-400">-</span>
+                              )}
+                          </td>
+                          <td className="px-2 py-4 text-right">
+                              <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                   {/* Only allow restock on main item if it has no variants */}
+                                   {(!product.variants || product.variants.length === 0) && (
+                                       <>
+                                           {isMainBoutique && (
+                                               <button onClick={() => {
+                                                   if (onTransferProduct) {
+                                                       onTransferProduct(product.id);
+                                                   } else {
+                                                       onNavigate?.('transfers');
+                                                   }
+                                               }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg border border-transparent hover:border-blue-200 transition-all" title="Transférer">
+                                                   <ArrowRightLeft className="w-4 h-4" />
+                                               </button>
+                                           )}
+                                           {userBoutique !== 'Boutique 2' && (
+                                               <button onClick={() => openRestockModal(product)} className="p-2 text-green-600 hover:bg-green-50 rounded-lg border border-transparent hover:border-green-200 transition-all" title={t('inventory.restock')}>
+                                                   <RefreshCw className="w-4 h-4" />
+                                               </button>
+                                           )}
+                                       </>
+                                   )}
+                                  <button onClick={() => setViewingProductId(product.id)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg border border-transparent hover:border-blue-200 transition-all" title={t('common.view')}>
+                                      <TrendingUp className="w-4 h-4" />
+                                  </button>
+                                  <button onClick={() => handleEditClick(product)} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg border border-transparent hover:border-gray-200 transition-all" title={t('common.edit')}>
+                                      <Edit2 className="w-4 h-4" />
+                                  </button>
+                                  <button onClick={() => handleDelete(product)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-200 transition-all" title={t('common.delete')}>
+                                      <Trash2 className="w-4 h-4" />
+                                  </button>
+                              </div>
+                          </td>
+                      </tr>
+                      {/* Variants Sub-rows */}
+                      {product.variants?.map((variant, idx) => {
+                          const isVariantLowStock = (isMainBoutique ? (variant.stock || 0) : (variant.boutiqueStock?.[userBoutique] || 0)) <= (variant.lowStockThreshold !== undefined ? variant.lowStockThreshold : (product.lowStockThreshold || 5));
+                          return (
+                          <tr key={`${product.id}-v-${idx}`} className={`transition-colors ${isVariantLowStock ? 'bg-red-50/50 border-l-4 border-red-400/70 hover:bg-red-100/40' : 'bg-gray-50/30'}`}>
+                              <td className="px-6 py-3 pl-14">
+                                  <div className="flex items-center gap-3 text-gray-600">
+                                      <CornerDownRight className="w-4 h-4 text-gray-400" />
+                                      <span className="text-sm font-semibold">{variant.name}</span>
+                                  </div>
+                              </td>
+                              <td className="px-6 py-3 font-mono text-xs text-blue-600">
+                                  {variant.costPrice ? new Intl.NumberFormat('fr-FR').format(variant.costPrice) : '-'}
+                              </td>
                             <td className="px-6 py-3 font-mono text-xs text-amber-600">
                                 {variant.wholesalePrice ? new Intl.NumberFormat('fr-FR').format(variant.wholesalePrice) : '-'}
                             </td>
@@ -1701,7 +1800,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
                                 {new Intl.NumberFormat('fr-FR').format(variant.price)}
                             </td>
                             <td className="px-6 py-3">
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border ${(isMainBoutique ? (variant.stock || 0) : (variant.boutiqueStock?.[userBoutique] || 0)) <= (product.lowStockThreshold || 5) ? 'bg-red-50 text-red-600 border-red-100' : 'bg-white text-gray-700 border-gray-200'}`}>
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border ${(isMainBoutique ? (variant.stock || 0) : (variant.boutiqueStock?.[userBoutique] || 0)) <= (variant.lowStockThreshold !== undefined ? variant.lowStockThreshold : (product.lowStockThreshold || 5)) ? 'bg-red-50 text-red-600 border-red-100' : 'bg-white text-gray-700 border-gray-200'}`}>
                                     {formatStock(isMainBoutique ? (variant.stock || 0) : (variant.boutiqueStock?.[userBoutique] || 0))}
                                 </span>
                             </td>
@@ -1729,9 +1828,9 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
                                 </div>
                             </td>
                         </tr>
-                    ))}
+                    ); })}
                 </React.Fragment>
-                ))}
+                ); })}
             </tbody>
           </table>
           {filteredProducts.length === 0 && (
@@ -1785,7 +1884,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
                                   <div key={i} className="p-2 md:p-3 flex justify-between items-center text-[10px] md:text-sm hover:bg-gray-50 transition-colors">
                                       <span className="font-medium text-gray-800">{v.name}</span>
                                       <div className="flex items-center gap-2 md:gap-4">
-                                          <span className={`px-1.5 md:px-2 py-0.5 rounded text-[8px] md:text-xs font-bold border ${(v.stock || 0) <= (viewingProduct.lowStockThreshold || 5) ? 'bg-red-50 text-red-600 border-red-100' : 'bg-green-50 text-green-600 border-green-100'}`}>
+                                          <span className={`px-1.5 md:px-2 py-0.5 rounded text-[8px] md:text-xs font-bold border ${(v.stock || 0) <= (v.lowStockThreshold !== undefined ? v.lowStockThreshold : (viewingProduct.lowStockThreshold || 5)) ? 'bg-red-50 text-red-600 border-red-100' : 'bg-green-50 text-green-600 border-green-100'}`}>
                                               {formatStock(v.stock || 0)}
                                           </span>
                                           <span className="font-mono font-bold text-gray-900">{v.price} F</span>
@@ -1984,6 +2083,10 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
                                     <input type="number" className="w-full p-2.5 md:p-3 border border-gray-200 rounded-xl text-sm md:text-base font-bold text-blue-600 focus:ring-2 focus:ring-farm-500 outline-none" value={variantCostPrice} onChange={e => setVariantCostPrice(e.target.value)} />
                                 </div>
                             )}
+                            <div className="space-y-1 md:space-y-2">
+                                <label className="text-[10px] md:text-xs font-bold text-red-600 uppercase">{t('inventory.low_stock_threshold_label') || 'Seuil Bas'}</label>
+                                <input type="number" className="w-full p-2.5 md:p-3 border border-red-200 rounded-xl text-sm md:text-base font-bold text-red-900 focus:ring-2 focus:ring-red-500 outline-none" value={variantLowStockThreshold} onChange={e => setVariantLowStockThreshold(e.target.value)} placeholder="5" />
+                            </div>
                         </div>
                     </div>
                 ) : (
@@ -2117,6 +2220,102 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
                   </div>
               </div>
           </div>
+      )}
+
+      {/* Stock Assignment Modal when adding first variant(s) to a product with existing stock */}
+      {stockAssignmentModal?.isOpen && (
+        <div className="fixed inset-0 bg-black/50 z-[250] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-xl max-w-lg w-full p-8 border border-gray-100 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-4 text-farm-600 mb-6">
+              <div className="p-3 bg-farm-100 rounded-full">
+                <Tag className="w-6 h-6 text-farm-700" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 font-display">Répartition du Stock Existant</h3>
+                <p className="text-xs text-gray-500 mt-1">Attribuer le stock existant aux nouvelles variantes</p>
+              </div>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 text-sm text-amber-800">
+              <span className="font-bold">Stock total à répartir : </span> 
+              <span className="font-mono font-bold text-base">{stockAssignmentModal.existingStock} {editForm.unit}</span>
+            </div>
+
+            <div className="space-y-4 mb-6 max-h-[250px] overflow-y-auto pr-2">
+              {stockAssignmentModal.variants.map((v, i) => (
+                <div key={i} className="flex items-center justify-between gap-4 p-4 bg-gray-50 rounded-2xl border border-gray-200">
+                  <span className="font-bold text-gray-800 text-sm">{v.name}</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      step="any"
+                      min="0"
+                      className="w-28 p-2 text-right border border-gray-300 rounded-xl text-sm font-mono font-bold outline-none focus:ring-2 focus:ring-farm-500"
+                      placeholder="Quantité"
+                      value={stockAssignmentModal.assignedStocks[v.name] ?? ''}
+                      onChange={e => {
+                        const val = parseFloat(e.target.value) || 0;
+                        setStockAssignmentModal({
+                          ...stockAssignmentModal,
+                          assignedStocks: {
+                            ...stockAssignmentModal.assignedStocks,
+                            [v.name]: val
+                          }
+                        });
+                      }}
+                    />
+                    <span className="text-xs text-gray-500 font-medium">{editForm.unit}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Total Indicator */}
+            {(() => {
+              const sumAssigned = Object.values(stockAssignmentModal.assignedStocks).reduce((sum, s) => sum + s, 0);
+              const remaining = stockAssignmentModal.existingStock - sumAssigned;
+              const isPerfect = Math.abs(remaining) < 0.0001;
+
+              return (
+                <div className="p-4 rounded-2xl border mb-6 flex justify-between items-center text-sm font-bold shadow-sm transition-colors duration-200 bg-gray-50/50 border-gray-100">
+                  <div>
+                    <span className="text-gray-500">Total attribué : </span>
+                    <span className="font-mono text-gray-900">{sumAssigned}</span>
+                  </div>
+                  <div>
+                    {isPerfect ? (
+                      <span className="text-green-600 flex items-center gap-1">✔ Répartition exacte</span>
+                    ) : (
+                      <span className="text-red-600 font-mono">Reste : {remaining.toFixed(2)}</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setStockAssignmentModal(null)}
+                className="px-6 py-3 text-gray-600 font-bold hover:bg-gray-100 rounded-xl transition-colors"
+                disabled={isSubmitting}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleConfirmStockAssignment}
+                className={`px-6 py-3 text-white font-bold rounded-xl transition-all shadow-md flex items-center gap-2 ${
+                  Math.abs(Object.values(stockAssignmentModal.assignedStocks).reduce((sum, s) => sum + s, 0) - stockAssignmentModal.existingStock) < 0.0001
+                    ? 'bg-farm-600 hover:bg-farm-700 shadow-farm-600/20'
+                    : 'bg-gray-400 cursor-not-allowed'
+                }`}
+                disabled={isSubmitting || Math.abs(Object.values(stockAssignmentModal.assignedStocks).reduce((sum, s) => sum + s, 0) - stockAssignmentModal.existingStock) >= 0.0001}
+              >
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                Valider la répartition
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

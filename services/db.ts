@@ -2,6 +2,7 @@ import { db, auth } from './firebase';
 import { 
   collection, 
   doc, 
+  getDoc as firebaseGetDoc,
   setDoc as firebaseSetDoc, 
   deleteDoc as firebaseDeleteDoc, 
   onSnapshot as firebaseOnSnapshot, 
@@ -314,7 +315,24 @@ export const subscribeToProducts = (provenderieId: string, callback: (products: 
 };
 
 export const saveProduct = async (product: Product) => {
-  await writeToFirestore('products', { ...product, deleted: false }, 'upsert');
+  let updatedProduct = { ...product };
+  if (updatedProduct.variants && updatedProduct.variants.length > 0) {
+    const sumStock = updatedProduct.variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+    updatedProduct.stock = sumStock;
+
+    const combinedBoutiqueStock: { [key: string]: number } = {};
+    updatedProduct.variants.forEach(v => {
+      if (v.boutiqueStock) {
+        Object.entries(v.boutiqueStock).forEach(([bId, qty]) => {
+          combinedBoutiqueStock[bId] = (combinedBoutiqueStock[bId] || 0) + (qty || 0);
+        });
+      }
+    });
+    if (Object.keys(combinedBoutiqueStock).length > 0) {
+      updatedProduct.boutiqueStock = combinedBoutiqueStock;
+    }
+  }
+  await writeToFirestore('products', { ...updatedProduct, deleted: false }, 'upsert');
 };
 
 export const deleteProduct = async (id: string) => {
@@ -569,7 +587,7 @@ export const setEmployeeOnlineStatus = async (
 
 // --- TRANSACTIONS ---
 
-export const processSaleTransaction = (invoice: Invoice, updatedProducts: Product[], customer?: Customer) => {
+export const processSaleTransaction = (invoice: Invoice, updatedProducts: Product[], customer?: Customer, updatedPreviousInvoices?: Invoice[]) => {
   const batch = writeBatch(db);
   const now = new Date().toISOString();
 
@@ -580,8 +598,25 @@ export const processSaleTransaction = (invoice: Invoice, updatedProducts: Produc
 
   // 2. Update Products
   for (const p of updatedProducts) {
-    const pRef = doc(db, 'products', p.id);
-    const cleanProduct = removeUndefined({ ...p, updatedAt: now, deleted: false });
+    let updatedP = { ...p };
+    if (updatedP.variants && updatedP.variants.length > 0) {
+      const sumStock = updatedP.variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+      updatedP.stock = sumStock;
+
+      const combinedBoutiqueStock: { [key: string]: number } = {};
+      updatedP.variants.forEach(v => {
+        if (v.boutiqueStock) {
+          Object.entries(v.boutiqueStock).forEach(([bId, qty]) => {
+            combinedBoutiqueStock[bId] = (combinedBoutiqueStock[bId] || 0) + (qty || 0);
+          });
+        }
+      });
+      if (Object.keys(combinedBoutiqueStock).length > 0) {
+        updatedP.boutiqueStock = combinedBoutiqueStock;
+      }
+    }
+    const pRef = doc(db, 'products', updatedP.id);
+    const cleanProduct = removeUndefined({ ...updatedP, updatedAt: now, deleted: false });
     batch.set(pRef, cleanProduct, { merge: true });
   }
 
@@ -591,16 +626,25 @@ export const processSaleTransaction = (invoice: Invoice, updatedProducts: Produc
       const updatedCustomer = {
           ...customer,
           advanceBalance: customer.advanceBalance - invoice.advanceUsed + invoice.newAdvanceCreated,
-          outstandingDebt: customer.outstandingDebt + invoice.remainingDebt
+          outstandingDebt: Math.max(0, customer.outstandingDebt + invoice.remainingDebt - (invoice.debtPaid || 0))
       };
       batch.set(cRef, removeUndefined(updatedCustomer), { merge: true });
+  }
+
+  // 4. Update Previous Invoices (if debt was repaid/utilized in POS)
+  if (updatedPreviousInvoices && updatedPreviousInvoices.length > 0) {
+    for (const prevInv of updatedPreviousInvoices) {
+      const prevInvRef = doc(db, 'invoices', prevInv.id);
+      const cleanPrevInvoice = removeUndefined({ ...prevInv, updatedAt: now });
+      batch.set(prevInvRef, cleanPrevInvoice, { merge: true });
+    }
   }
 
   batch.commit().catch(console.error);
   return Promise.resolve();
 };
 
-export const processPaymentRecovery = (invoice: Invoice, customer?: Customer) => {
+export const processPaymentRecovery = (invoice: Invoice, customer?: Customer, advanceAdded: number = 0) => {
   const batch = writeBatch(db);
   const now = new Date().toISOString();
 
@@ -612,18 +656,12 @@ export const processPaymentRecovery = (invoice: Invoice, customer?: Customer) =>
   // 2. Update Customer Debt if applicable
   if (customer) {
     const cRef = doc(db, 'customers', customer.id);
-    // The customer's total outstanding debt should be updated.
-    // We calculate the debt reduction based on the payment added.
-    // However, it's safer to just recalculate or pass the new debt.
-    // Since we have the invoice's remainingDebt, we can't easily know the total customer debt 
-    // without knowing all their invoices.
-    // But usually, we just subtract the payment amount from the customer's total debt.
-    
-    // Get the last payment amount
     const lastPayment = invoice.paymentHistory?.[invoice.paymentHistory.length - 1];
     if (lastPayment) {
+        const debtReduction = Math.max(0, lastPayment.amount - advanceAdded);
         batch.set(cRef, { 
-            outstandingDebt: Math.max(0, customer.outstandingDebt - lastPayment.amount),
+            outstandingDebt: Math.max(0, customer.outstandingDebt - debtReduction),
+            advanceBalance: (customer.advanceBalance || 0) + advanceAdded,
             updatedAt: now 
         }, { merge: true });
     }
@@ -632,23 +670,130 @@ export const processPaymentRecovery = (invoice: Invoice, customer?: Customer) =>
   return batch.commit();
 };
 
-export const voidSaleTransaction = (invoiceId: string, restoredProducts: Product[]) => {
+export const voidSaleTransaction = async (invoiceId: string, restoredProducts: Product[]) => {
   const batch = writeBatch(db);
   const now = new Date().toISOString();
 
-  // 1. Delete Invoice
+  // 1. Fetch Invoice
   const invRef = doc(db, 'invoices', invoiceId);
+  const invSnap = await firebaseGetDoc(invRef);
+  if (!invSnap.exists()) {
+    throw new Error("L'facture n'existe pas.");
+  }
+  trackReads(1);
+  const invoice = invSnap.data() as Invoice;
+
+  // 2. Delete Invoice
   batch.set(invRef, { deleted: true, updatedAt: now }, { merge: true });
 
-  // 2. Restore Products
+  // 3. Restore Products
   for (const p of restoredProducts) {
-    const pRef = doc(db, 'products', p.id);
-    const cleanProduct = removeUndefined({ ...p, updatedAt: now, deleted: false });
+    let updatedP = { ...p };
+    if (updatedP.variants && updatedP.variants.length > 0) {
+      const sumStock = updatedP.variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+      updatedP.stock = sumStock;
+
+      const combinedBoutiqueStock: { [key: string]: number } = {};
+      updatedP.variants.forEach(v => {
+        if (v.boutiqueStock) {
+          Object.entries(v.boutiqueStock).forEach(([bId, qty]) => {
+            combinedBoutiqueStock[bId] = (combinedBoutiqueStock[bId] || 0) + (qty || 0);
+          });
+        }
+      });
+      if (Object.keys(combinedBoutiqueStock).length > 0) {
+        updatedP.boutiqueStock = combinedBoutiqueStock;
+      }
+    }
+    const pRef = doc(db, 'products', updatedP.id);
+    const cleanProduct = removeUndefined({ ...updatedP, updatedAt: now, deleted: false });
     batch.set(pRef, cleanProduct, { merge: true });
   }
 
-  batch.commit().catch(console.error);
-  return Promise.resolve();
+  // 4. Discard customer's debt, advance, or any money linked to this invoice
+  if (invoice.customerName && invoice.customerName !== 'Client Comptoir') {
+    // Find customer by name
+    const custQuery = query(
+      collection(db, 'customers'),
+      where('provenderieId', '==', invoice.provenderieId || '')
+    );
+    const custSnap = await firebaseGetDocs(custQuery);
+    trackReads(custSnap.size || 1);
+
+    const matchedCustomerDoc = custSnap.docs.find(doc => {
+      const custData = doc.data() as Customer;
+      return (custData.name || '').toLowerCase().trim() === (invoice.customerName || '').toLowerCase().trim();
+    });
+
+    if (matchedCustomerDoc) {
+      const customer = matchedCustomerDoc.data() as Customer;
+      const cRef = doc(db, 'customers', customer.id);
+
+      // Reverting customer debt and advance balances
+      const updatedAdvanceBalance = Math.max(0, (customer.advanceBalance || 0) + (invoice.advanceUsed || 0) - (invoice.newAdvanceCreated || 0));
+      const updatedOutstandingDebt = Math.max(0, (customer.outstandingDebt || 0) - (invoice.remainingDebt || 0) + (invoice.debtPaid || 0));
+
+      batch.set(cRef, {
+        advanceBalance: updatedAdvanceBalance,
+        outstandingDebt: updatedOutstandingDebt,
+        updatedAt: now
+      }, { merge: true });
+    }
+
+    // Roll back previous invoices paid by this invoice
+    const allInvoicesQuery = query(
+      collection(db, 'invoices'),
+      where('provenderieId', '==', invoice.provenderieId || '')
+    );
+    const allInvoicesSnap = await firebaseGetDocs(allInvoicesQuery);
+    trackReads(allInvoicesSnap.size || 1);
+
+    for (const d of allInvoicesSnap.docs) {
+      const otherInv = d.data() as Invoice;
+      if (otherInv.id === invoice.id || otherInv.deleted) continue;
+
+      if (otherInv.paymentHistory && otherInv.paymentHistory.length > 0) {
+        let hasChanges = false;
+        let totalDeductedFromPayment = 0;
+        const newPaymentHistory = otherInv.paymentHistory.filter(payment => {
+          const isMatch = payment.note && (
+            payment.note.includes(invoice.id) || 
+            payment.note.includes(`(${invoice.id})`)
+          );
+
+          if (isMatch) {
+            totalDeductedFromPayment += payment.amount || 0;
+            hasChanges = true;
+            return false;
+          }
+          return true;
+        });
+
+        if (hasChanges) {
+          const originalAmountPaid = otherInv.amountPaid || 0;
+          const originalRemainingDebt = otherInv.remainingDebt !== undefined 
+            ? otherInv.remainingDebt 
+            : Math.max(0, otherInv.total - (otherInv.amountPaid || 0) - (otherInv.advanceUsed || 0));
+
+          const newAmountPaid = Math.max(0, originalAmountPaid - totalDeductedFromPayment);
+          const newRemainingDebt = originalRemainingDebt + totalDeductedFromPayment;
+          const totalPaid = newAmountPaid + (otherInv.advanceUsed || 0);
+          const newStatus = totalPaid >= otherInv.total - 0.01 ? 'PAYÉ' : (totalPaid > 0 ? 'PARTIEL' : 'IMPAYÉ');
+
+          const otherInvRef = doc(db, 'invoices', otherInv.id);
+          batch.set(otherInvRef, {
+            amountPaid: newAmountPaid,
+            remainingDebt: newRemainingDebt,
+            status: newStatus,
+            paymentHistory: newPaymentHistory,
+            updatedAt: now
+          }, { merge: true });
+        }
+      }
+    }
+  }
+
+  await batch.commit();
 };
 
 // --- TRANSFERS ---

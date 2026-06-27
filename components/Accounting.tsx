@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Invoice, Product, Expense, Payment, Boutique, StockTransfer, Customer } from '../types';
+import { Invoice, Product, Expense, Payment, Boutique, StockTransfer, Customer, Employee } from '../types';
 import { Wallet, TrendingDown, TrendingUp, Calendar, Trash2, ArrowDownRight, AlertCircle, CheckCircle2, User, Coins, X, FileText, AlertTriangle, Package, ArrowRight } from 'lucide-react';
-import { deleteExpense, processPaymentRecovery, saveExpense } from '../services/db';
+import { deleteExpense, processPaymentRecovery, saveExpense, saveEmployee } from '../services/db';
 import { useNotifications } from './ui/Notifications';
 import { Pagination } from './Pagination';
 
@@ -17,11 +17,12 @@ interface AccountingProps {
   userBoutique?: string;
   customers?: Customer[];
   currentProvenderieId?: string;
+  employees?: Employee[];
 }
 
 type TimeRange = 'today' | 'week' | 'month' | 'year' | 'all';
 
-export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expenses, transfers = [], onUpdateInvoice, boutiques = [], userRole = 'Admin', userBoutique = 'Toutes', customers = [], currentProvenderieId }) => {
+export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expenses, transfers = [], onUpdateInvoice, boutiques = [], userRole = 'Admin', userBoutique = 'Toutes', customers = [], currentProvenderieId, employees = [] }) => {
   const { notify } = useNotifications();
   const [activeTab, setActiveTab] = useState<'expenses' | 'debts' | 'transfers'>(() => {
     const saved = localStorage.getItem('smartAgro_initialAccountingTab');
@@ -43,6 +44,7 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
                          normRole.includes('administrateur');
   const canFilterBoutique = isSuperOrAdmin || (userRole === 'Gérant' && userBoutique === 'Toutes');
   const [includeDebts, setIncludeDebts] = useState<boolean>(true);
+  const [includeAvance, setIncludeAvance] = useState<boolean>(false);
   const [expenseCategoryFilter, setExpenseCategoryFilter] = useState<string>('all');
   const [expenseSearchTerm, setExpenseSearchTerm] = useState<string>('');
   const [expenseDateFilter, setExpenseDateFilter] = useState<string>('');
@@ -64,12 +66,30 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
     amount: 0,
     category: 'AUTRE',
     description: '',
-    boutique: isSuperOrAdmin ? boutiques[0]?.id : userBoutique
+    boutique: isSuperOrAdmin ? boutiques[0]?.id : userBoutique,
+    employeeId: ''
   });
 
   const handleSaveExpense = async () => {
-    if (!newExpense.amount || newExpense.amount <= 0 || !newExpense.description) {
-      notify("Veuillez remplir le montant et le motif", "error");
+    let finalDescription = newExpense.description || '';
+    if (newExpense.category === 'SALAIRE') {
+      const emp = employees?.find(e => e.id === newExpense.employeeId);
+      finalDescription = emp ? `Salaire - ${emp.name}` : 'Salaire';
+    } else if (newExpense.category === 'RATION') {
+      const emp = employees?.find(e => e.id === newExpense.employeeId);
+      finalDescription = emp ? `Ration - ${emp.name}` : 'Ration';
+    } else if (newExpense.category !== 'AUTRE') {
+      const categoryNames: Record<string, string> = {
+        'ELECTRICITE': 'Electricité',
+        'EAU': 'Eau',
+        'INTERNET': 'Internet',
+        'DIVERS': 'Divers'
+      };
+      finalDescription = categoryNames[newExpense.category || 'AUTRE'] || newExpense.category || 'Dépense';
+    }
+
+    if (!newExpense.amount || newExpense.amount <= 0 || (newExpense.category === 'AUTRE' && !finalDescription)) {
+      notify("Veuillez remplir le montant" + (newExpense.category === 'AUTRE' ? " et le motif" : ""), "error");
       return;
     }
     setIsSubmittingExpense(true);
@@ -79,19 +99,35 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
         date: new Date().toISOString(),
         amount: newExpense.amount,
         category: newExpense.category as any || 'AUTRE',
-        description: newExpense.description,
+        description: finalDescription,
         deleted: false,
         provenderieId: currentProvenderieId,
         boutique: newExpense.boutique || userBoutique,
+        employeeId: newExpense.employeeId || undefined
       };
       await saveExpense(expense);
+
+      if (newExpense.category === 'SALAIRE' || newExpense.category === 'RATION') {
+        const emp = employees?.find(e => e.id === newExpense.employeeId);
+        if (emp) {
+          const updatedEmp = { ...emp };
+          if (newExpense.category === 'SALAIRE') {
+            updatedEmp.pendingSalary = Math.max(0, (updatedEmp.pendingSalary || 0) - newExpense.amount);
+          } else {
+            updatedEmp.pendingRation = Math.max(0, (updatedEmp.pendingRation || 0) - newExpense.amount);
+          }
+          await saveEmployee(updatedEmp);
+        }
+      }
+
       notify("Dépense enregistrée", "success");
       setIsExpenseModalOpen(false);
       setNewExpense({
         amount: 0,
         category: 'AUTRE',
         description: '',
-        boutique: isSuperOrAdmin ? boutiques[0]?.id : userBoutique
+        boutique: isSuperOrAdmin ? boutiques[0]?.id : userBoutique,
+        employeeId: ''
       });
     } catch (error) {
       console.error(error);
@@ -191,7 +227,16 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
   [invoices, boutiqueFilter]);
 
   const totalRevenueBilled = useMemo(() => filteredInvoices.reduce((acc, inv) => acc + inv.total, 0), [filteredInvoices]);
-  const totalCashCollected = useMemo(() => filteredInvoices.reduce((acc, inv) => acc + (inv.amountPaid - (inv.reimbursement || 0)), 0), [filteredInvoices]);
+  const totalCashCollected = useMemo(() => {
+    return filteredInvoices.reduce((acc, inv) => {
+      const base = inv.amountPaid - (inv.reimbursement || 0);
+      if (includeAvance) {
+        return acc + base + (inv.advanceUsed || 0);
+      } else {
+        return acc + base - (inv.newAdvanceCreated || 0);
+      }
+    }, 0);
+  }, [filteredInvoices, includeAvance]);
   const totalReceivables = useMemo(() => filteredInvoices.reduce((acc, inv) => {
     const debt = inv.remainingDebt !== undefined ? inv.remainingDebt : Math.max(0, inv.total - (inv.amountPaid || 0) - (inv.advanceUsed || 0));
     return acc + debt;
@@ -205,9 +250,23 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
   }, [unpaidInvoices]);
 
   const recoveryRate = useMemo(() => {
-    if (totalRevenueBilled <= 0) return 0;
-    return Math.min(100, (totalCashCollected / totalRevenueBilled) * 100);
-  }, [totalCashCollected, totalRevenueBilled]);
+    const invoicesForPeriodAndBoutique = invoices.filter(inv => {
+      if (!isDateInRange(inv.date)) return false;
+      if (boutiqueFilter !== 'all' && inv.boutique !== boutiqueFilter) return false;
+      return true;
+    });
+    const billed = invoicesForPeriodAndBoutique.reduce((acc, inv) => acc + inv.total, 0);
+    const collected = invoicesForPeriodAndBoutique.reduce((acc, inv) => {
+      const base = inv.amountPaid - (inv.reimbursement || 0);
+      if (includeAvance) {
+        return acc + base + (inv.advanceUsed || 0);
+      } else {
+        return acc + base - (inv.newAdvanceCreated || 0);
+      }
+    }, 0);
+    if (billed <= 0) return 0;
+    return Math.min(100, (collected / billed) * 100);
+  }, [invoices, timeRange, boutiqueFilter, includeAvance]);
 
   const totalCOGS = useMemo(() => {
     const getMultiplier = (unit: string) => {
@@ -322,19 +381,33 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
          <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 w-full xl:w-auto">
              {/* --- TOGGLE DEBTS --- */}
              {activeTab === 'expenses' && (
-                 <label className="flex items-center justify-between sm:justify-start gap-3 cursor-pointer bg-white dark:bg-gray-800 px-4 rounded-xl border border-gray-200 dark:border-gray-750 shadow-sm hover:border-farm-300 hover:shadow-md transition-all h-12 w-full sm:w-auto select-none">
-                     <div className="relative inline-flex items-center">
-                         <input 
-                             type="checkbox" 
-                             className="sr-only peer" 
-                             checked={includeDebts}
-                             onChange={() => setIncludeDebts(!includeDebts)}
-                         />
-                         <div className="w-11 h-6 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
-                     </div>
-                     <span className="text-sm font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">Inclure crédits</span>
-                 </label>
-             )}
+                  <>
+                  <label className="flex items-center justify-between sm:justify-start gap-3 cursor-pointer bg-white dark:bg-gray-800 px-4 rounded-xl border border-gray-200 dark:border-gray-750 shadow-sm hover:border-farm-300 hover:shadow-md transition-all h-12 w-full sm:w-auto select-none">
+                      <div className="relative inline-flex items-center">
+                          <input 
+                              type="checkbox" 
+                              className="sr-only peer" 
+                              checked={includeDebts}
+                              onChange={() => setIncludeDebts(!includeDebts)}
+                          />
+                          <div className="w-11 h-6 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
+                      </div>
+                      <span className="text-sm font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">Inclure crédits</span>
+                  </label>
+                  <label className="flex items-center justify-between sm:justify-start gap-3 cursor-pointer bg-white dark:bg-gray-800 px-4 rounded-xl border border-gray-200 dark:border-gray-750 shadow-sm hover:border-farm-300 hover:shadow-md transition-all h-12 w-full sm:w-auto select-none">
+                      <div className="relative inline-flex items-center">
+                          <input 
+                              type="checkbox" 
+                              className="sr-only peer" 
+                              checked={includeAvance}
+                              onChange={() => setIncludeAvance(!includeAvance)}
+                          />
+                          <div className="w-11 h-6 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
+                      </div>
+                      <span className="text-sm font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">Inclure avances</span>
+                  </label>
+                  </>
+              )}
 
              {canFilterBoutique && (
                  <select 
@@ -874,7 +947,37 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
                           <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Catégorie</label>
                           <select 
                               value={newExpense.category}
-                              onChange={e => setNewExpense({...newExpense, category: e.target.value as any})}
+                              onChange={e => {
+                                  const cat = e.target.value as any;
+                                  let empId = newExpense.employeeId || '';
+                                  let amt = newExpense.amount || 0;
+                                  let btq = newExpense.boutique || '';
+                                  
+                                  if ((cat === 'SALAIRE' || cat === 'RATION') && !empId && employees && employees.length > 0) {
+                                      // Default to first employee
+                                      const defaultEmp = employees[0];
+                                      empId = defaultEmp.id;
+                                      amt = cat === 'SALAIRE' ? (defaultEmp.salary || 0) : (defaultEmp.ration || 0);
+                                      if (defaultEmp.assignedBoutique && defaultEmp.assignedBoutique !== 'Toutes') {
+                                          const matchBoutique = boutiques.find(b => b.id === defaultEmp.assignedBoutique || b.name === defaultEmp.assignedBoutique);
+                                          if (matchBoutique) {
+                                              btq = matchBoutique.id;
+                                          }
+                                      }
+                                  } else if (cat === 'SALAIRE' || cat === 'RATION') {
+                                      const emp = employees?.find(emp => emp.id === empId);
+                                      if (emp) {
+                                          amt = cat === 'SALAIRE' ? (emp.salary || 0) : (emp.ration || 0);
+                                      }
+                                  }
+                                  setNewExpense({
+                                      ...newExpense,
+                                      category: cat,
+                                      employeeId: empId,
+                                      amount: amt,
+                                      boutique: btq
+                                  });
+                              }}
                               className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-3 px-4 outline-none focus:border-red-500 focus:bg-white transition-all text-slate-700 font-bold"
                           >
                               <option value="ELECTRICITE">Electricité</option>
@@ -886,17 +989,58 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
                               <option value="AUTRE">Autre</option>
                           </select>
                       </div>
-                      <div className="space-y-2">
-                          <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Motif de la Dépense</label>
-                          <input 
-                              type="text" 
-                              value={newExpense.description || ''}
-                              onChange={e => setNewExpense({...newExpense, description: e.target.value})}
-                              className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-3 px-4 outline-none focus:border-red-500 focus:bg-white transition-all text-slate-700 font-bold"
-                              placeholder="Ex: Achat de fournitures"
-                          />
-                      </div>
-                      {isSuperOrAdmin && (
+                      {(newExpense.category === 'SALAIRE' || newExpense.category === 'RATION') && (
+                          <div className="space-y-2">
+                              <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Employé</label>
+                              <select 
+                                  value={newExpense.employeeId || ''}
+                                  onChange={e => {
+                                      const empId = e.target.value;
+                                      const emp = employees?.find(emp => emp.id === empId);
+                                      let updatedAmount = newExpense.amount || 0;
+                                      let updatedBoutique = newExpense.boutique || '';
+                                      if (emp) {
+                                          if (newExpense.category === 'SALAIRE') {
+                                              updatedAmount = emp.salary || 0;
+                                          } else if (newExpense.category === 'RATION') {
+                                              updatedAmount = emp.ration || 0;
+                                          }
+                                          if (emp.assignedBoutique && emp.assignedBoutique !== 'Toutes') {
+                                              const matchBoutique = boutiques.find(b => b.id === emp.assignedBoutique || b.name === emp.assignedBoutique);
+                                              if (matchBoutique) {
+                                                  updatedBoutique = matchBoutique.id;
+                                              }
+                                          }
+                                      }
+                                      setNewExpense({
+                                          ...newExpense,
+                                          employeeId: empId,
+                                          amount: updatedAmount,
+                                          boutique: updatedBoutique
+                                      });
+                                  }}
+                                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-3 px-4 outline-none focus:border-red-500 focus:bg-white transition-all text-slate-700 font-bold"
+                              >
+                                  <option value="">-- Sélectionner un employé --</option>
+                                  {employees?.map(emp => (
+                                      <option key={emp.id} value={emp.id}>{emp.name}</option>
+                                  ))}
+                              </select>
+                          </div>
+                      )}
+                      {newExpense.category === 'AUTRE' && (
+                          <div className="space-y-2">
+                              <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Motif de la Dépense</label>
+                              <input 
+                                  type="text" 
+                                  value={newExpense.description || ''}
+                                  onChange={e => setNewExpense({...newExpense, description: e.target.value})}
+                                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-3 px-4 outline-none focus:border-red-500 focus:bg-white transition-all text-slate-700 font-bold"
+                                  placeholder="Ex: Achat de fournitures"
+                              />
+                          </div>
+                      )}
+                      {(isSuperOrAdmin || newExpense.category === 'SALAIRE' || newExpense.category === 'RATION') && (
                           <div className="space-y-2">
                               <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Boutique</label>
                               <select 

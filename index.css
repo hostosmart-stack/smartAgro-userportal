@@ -34,6 +34,25 @@
   .printable-content * {
     visibility: visible !important;
   }
+
+  /* Force display and override any display:none, print:hidden, opacities, scale, filters, or transitions on parent containers of printable content */
+  *:has(.printable-content) {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    transform: none !important;
+    backdrop-filter: none !important;
+    filter: none !important;
+    animation: none !important;
+    transition: none !important;
+    position: static !important;
+    height: auto !important;
+    width: auto !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+  }
   
   /* Centered positioning relative to the paper viewport */
   .printable-content {
@@ -101,10 +120,21 @@
     overflow: hidden !important;
   }
 
+  /* Show print-only classes under print */
+  .print-only {
+    display: block !important;
+    visibility: visible !important;
+  }
+
   @page {
     size: auto;
     margin: 0mm;
   }
+}
+
+/* Hide print-only classes under screen mode */
+.print-only {
+  display: none !important;
 }
 
 body {

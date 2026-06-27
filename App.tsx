@@ -399,14 +399,14 @@ const InnerApp = () => {
     };
   }, [user, currentProvenderieId, isSuperAdminUser]);
 
-  const handleCheckout = async (newInvoice: Invoice, updatedStock: Product[], customer?: Customer) => {
+  const handleCheckout = async (newInvoice: Invoice, updatedStock: Product[], customer?: Customer, updatedPreviousInvoices?: Invoice[]) => {
     try {
       const invoiceWithProvenderie = { ...newInvoice, provenderieId: currentProvenderieId };
       const changedProducts = updatedStock.filter(p => 
         (newInvoice.items || []).some(item => item.id === p.id)
       ).map(p => ({ ...p, provenderieId: p.provenderieId || currentProvenderieId }));
       
-      await processSaleTransaction(invoiceWithProvenderie, changedProducts, customer);
+      await processSaleTransaction(invoiceWithProvenderie, changedProducts, customer, updatedPreviousInvoices);
       // Notifications handled in POS component for specific UI feedback
     } catch (error) {
       console.error("Error processing sale:", error);
@@ -734,7 +734,7 @@ const InnerApp = () => {
       case 'transfers': return <Transfers products={filteredProducts} transfers={filteredTransfers} boutiques={filteredBoutiques} userRole={userRole} userBoutique={userBoutique} userName={currentEmployee?.name || 'Administrateur'} preSelectedProductId={preSelectedTransferProduct} onClearPreSelection={() => setPreSelectedTransferProduct(null)} currentProvenderieId={currentProvenderieId} />;
       case 'pos': return <POS products={filteredProducts} employees={filteredEmployees} invoices={filteredInvoices} expenses={filteredExpenses} customers={filteredCustomers} onCheckout={handleCheckout} onAddExpense={handleAddExpense} onVoidLastSale={handleVoidLastSale} userBoutique={userBoutique} userRole={userRole} userPermissions={userPermissions} boutiques={filteredBoutiques} companyName={companyName} userName={currentEmployee?.name || 'Administrateur'} currentProvenderieId={currentProvenderieId} provenderies={provenderies} categories={categories} />;
       case 'analytics': return <Analytics products={filteredProducts} invoices={filteredInvoices} boutiques={filteredBoutiques} userRole={userRole} userBoutique={userBoutique} categories={categories} />;
-      case 'accounting': return <Accounting invoices={filteredInvoices} products={filteredProducts} expenses={filteredExpenses} transfers={filteredTransfers} setExpenses={setExpenses} onUpdateInvoice={handleUpdateInvoice} boutiques={filteredBoutiques} userRole={userRole} userBoutique={userBoutique} customers={filteredCustomers} currentProvenderieId={currentProvenderieId} />;
+      case 'accounting': return <Accounting invoices={filteredInvoices} products={filteredProducts} expenses={filteredExpenses} transfers={filteredTransfers} setExpenses={setExpenses} onUpdateInvoice={handleUpdateInvoice} boutiques={filteredBoutiques} userRole={userRole} userBoutique={userBoutique} customers={filteredCustomers} currentProvenderieId={currentProvenderieId} employees={filteredEmployees} />;
       case 'invoices': return <Invoices invoices={filteredInvoices} products={filteredProducts} setProducts={setProducts} onUpdateInvoice={handleUpdateInvoice} boutiques={filteredBoutiques} companyName={companyName} userRole={userRole} userPermissions={userPermissions} userBoutique={userBoutique} customers={filteredCustomers} currentProvenderieId={currentProvenderieId} provenderies={provenderies} />;
       case 'employees': return <Employees employees={filteredEmployees} roles={filteredRoles} boutiques={filteredBoutiques} expenses={filteredExpenses} userRole={userRole} userBoutique={userBoutique} currentProvenderieId={currentProvenderieId} />;
       case 'boutiques': return <Boutiques products={filteredProducts} boutiques={filteredBoutiques} userRole={userRole} userBoutique={userBoutique} transfers={filteredTransfers} currentProvenderieId={currentProvenderieId} userRoleObj={userRoleObj} categories={categories} />;
