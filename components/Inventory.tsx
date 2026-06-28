@@ -83,6 +83,8 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
   const [mixName, setMixName] = useState('');
   const [mixCategory, setMixCategory] = useState<Category>(Category.POULTRY);
   const [mixSellingPrice, setMixSellingPrice] = useState<string>('');
+  const [mixCostPriceInput, setMixCostPriceInput] = useState<string>('');
+  const [isCostPriceManuallyEdited, setIsCostPriceManuallyEdited] = useState(false);
   const [ingredientSearch, setIngredientSearch] = useState('');
   const [mixerTab, setMixerTab] = useState<'production' | 'formulas' | 'history'>('production');
   const [showProductionSummary, setShowProductionSummary] = useState(false);
@@ -612,6 +614,13 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
               return prod ? { product: prod, variantName: item.variantName, weight: item.weight } : null;
           }).filter(i => i !== null) as MixIngredient[];
           setMixIngredients(ingredients);
+          if (formula.costPrice !== undefined) {
+              setMixCostPriceInput(formula.costPrice.toString());
+              setIsCostPriceManuallyEdited(true);
+          } else {
+              setMixCostPriceInput('');
+              setIsCostPriceManuallyEdited(false);
+          }
       }
   };
 
@@ -638,6 +647,12 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
   }, 0), [mixIngredients]);
   const mixCostPerKg = mixTotalWeight > 0 ? mixCostPrice / mixTotalWeight : 0;
   
+  useEffect(() => {
+    if (!isCostPriceManuallyEdited && mixCostPerKg > 0) {
+      setMixCostPriceInput(mixCostPerKg.toFixed(2));
+    }
+  }, [mixCostPerKg, isCostPriceManuallyEdited]);
+
   // Suggested Prices
   const suggestedWholesale = Math.ceil(mixCostPerKg * 1.15 / 5) * 5; // +15% margin, rounded to nearest 5
   const suggestedRetail = Math.ceil(mixCostPerKg * 1.30 / 5) * 5; // +30% margin
@@ -654,6 +669,8 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
       setEditingFormulaId(null);
       setIsEditingFormula(false);
       setSelectedProductionFormulaId(null);
+      setMixCostPriceInput('');
+      setIsCostPriceManuallyEdited(false);
   };
 
   const startNewFormula = () => {
@@ -691,6 +708,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
 
       const recipe = mixIngredients.map(i => ({ productId: i.product.id, variantName: i.variantName, weight: i.weight }));
       
+      const finalCostPrice = mixCostPriceInput ? parseFloat(mixCostPriceInput) : mixCostPerKg;
       let productToSave: Product;
 
       if (existingFormula) {
@@ -699,7 +717,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
               name: mixName, // Update name in case it changed
               category: mixCategory, // Update category as selected by the user
               recipe: recipe,
-              costPrice: mixCostPerKg, // Save calculated ingredient cost
+              costPrice: finalCostPrice, // Save calculated or manual cost
               // We don't change stock here
           };
           notify("Recette mise à jour", "success");
@@ -710,7 +728,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
             category: mixCategory, // Use dynamic mixCategory
             price: 0,
             wholesalePrice: 0,
-            costPrice: mixCostPerKg, // Save calculated ingredient cost
+            costPrice: finalCostPrice, // Save calculated or manual cost
             stock: 0,
             unit: 'kg',
             description: `Formule maison.`,
@@ -723,7 +741,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
               type: 'AJUSTEMENT',
               quantity: 0,
               note: 'Création Recette',
-              unitCost: mixCostPerKg
+              unitCost: finalCostPrice
             }]
           };
           notify("Nouvelle formule créée", "success");
@@ -865,6 +883,8 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
       
       let productToSave: Product;
 
+      const finalCostPrice = existingFormula?.costPrice || mixCostPerKg;
+
       if (existingFormula) {
           const newMovement: StockMovement = {
               id: Date.now().toString(),
@@ -872,14 +892,14 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
               type: 'PRODUCTION',
               quantity: targetWeightInKg,
               note: `Production depuis Mélangeur (${targetProductionWeight} ${productionUnit})`,
-              unitCost: mixCostPerKg
+              unitCost: finalCostPrice
           };
           
           productToSave = {
               ...existingFormula,
               stock: existingFormula.stock + targetWeightInKg,
               recipe: recipe,
-              costPrice: mixCostPerKg, // Update calculated production cost
+              costPrice: finalCostPrice, // Update calculated or manual production cost
               history: [newMovement, ...(existingFormula.history || [])]
           };
       } else {
@@ -889,7 +909,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
             category: mixCategory,
             price: 0,
             wholesalePrice: 0,
-            costPrice: mixCostPerKg, // Update calculated production cost
+            costPrice: finalCostPrice, // Update calculated or manual production cost
             stock: targetWeightInKg,
             unit: 'kg',
             description: `Formule maison.`,
@@ -902,7 +922,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
               type: 'PRODUCTION',
               quantity: targetWeightInKg,
               note: `Production Initiale (${targetProductionWeight} ${productionUnit})`,
-              unitCost: mixCostPerKg
+              unitCost: finalCostPrice
             }]
           };
       }
@@ -1297,7 +1317,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
                                         onChange={e => setMixName(e.target.value)} 
                                     />
                                 </div>
-                                <div className="w-full sm:w-48 shrink-0">
+                                <div className="w-full sm:w-40 shrink-0">
                                     <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Catégorie</label>
                                     <select 
                                         value={mixCategory} 
@@ -1307,6 +1327,21 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
                                         <option value={Category.POULTRY}>{Category.POULTRY}</option>
                                         <option value={Category.LIVESTOCK}>{Category.LIVESTOCK}</option>
                                     </select>
+                                </div>
+                                <div className="w-full sm:w-40 shrink-0">
+                                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Prix d'achat (F/kg)</label>
+                                    <input 
+                                        type="number"
+                                        min="0"
+                                        step="any"
+                                        className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-farm-500 outline-none font-bold text-gray-700"
+                                        placeholder="Ex: 250"
+                                        value={mixCostPriceInput}
+                                        onChange={e => {
+                                            setMixCostPriceInput(e.target.value);
+                                            setIsCostPriceManuallyEdited(true);
+                                        }}
+                                    />
                                 </div>
                                 <button onClick={() => setIsEditingFormula(false)} className="text-gray-400 hover:text-gray-600 p-2 shrink-0 self-end sm:self-center">
                                     <X className="w-5 h-5"/>
@@ -1366,8 +1401,20 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
                                     <div className="text-xs md:text-sm text-gray-600">
                                         Poids: <span className="font-bold text-gray-900">{mixTotalWeight.toFixed(1)} kg</span>
                                     </div>
-                                    <div className="text-xs md:text-sm text-gray-600">
-                                        Coût: <span className="font-bold text-gray-900">{mixCostPrice.toFixed(0)} F</span>
+                                    <div className="text-xs md:text-sm text-gray-600 flex items-center gap-2">
+                                        Coût calculé: <span className="font-bold text-gray-900">{mixCostPrice.toFixed(0)} F</span> ({mixCostPerKg.toFixed(1)} F/kg)
+                                        {isCostPriceManuallyEdited && (
+                                            <button 
+                                                onClick={() => {
+                                                    setIsCostPriceManuallyEdited(false);
+                                                    setMixCostPriceInput(mixCostPerKg.toFixed(2));
+                                                }}
+                                                className="text-[10px] text-farm-600 hover:underline font-semibold flex items-center gap-1 bg-farm-50 px-1.5 py-0.5 rounded border border-farm-200 cursor-pointer"
+                                                title="Réinitialiser le prix d'achat au coût calculé des ingrédients"
+                                            >
+                                                Réinitialiser
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                                 
