@@ -77,6 +77,7 @@ export const Invoices: React.FC<InvoicesProps> = ({ invoices, products, onUpdate
 
   const getMultiplier = (unit: string) => {
       if (unit === 'Sac 50kg') return 50;
+      if (unit === 'Sac 40kg') return 40;
       if (unit === 'Sac 25kg') return 25;
       return 1;
   };

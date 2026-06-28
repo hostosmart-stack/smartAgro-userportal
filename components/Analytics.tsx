@@ -14,6 +14,35 @@ interface AnalyticsProps {
 
 type TimeRange = 'today' | 'week' | 'month' | 'year' | 'all';
 
+const getProductCostPrice = (product: Product, variantName?: string | null, productsList: Product[] = []) => {
+  if (variantName) {
+    const variant = product.variants?.find(v => v.name === variantName);
+    if (variant?.costPrice) return variant.costPrice;
+  }
+  if (product.costPrice) return product.costPrice;
+
+  // Fallback to recipe if formula
+  if (product.recipe && product.recipe.length > 0) {
+    let computedCost = 0;
+    let totalWeight = 0;
+    product.recipe.forEach(ingredient => {
+      const ingredientProduct = productsList.find(p => p.id === ingredient.productId);
+      if (ingredientProduct) {
+        const ingredientCost = ingredient.variantName
+          ? (ingredientProduct.variants?.find(v => v.name === ingredient.variantName)?.costPrice || ingredientProduct.costPrice || ingredientProduct.price || 0)
+          : (ingredientProduct.costPrice || ingredientProduct.price || 0);
+        computedCost += ingredientCost * ingredient.weight;
+        totalWeight += ingredient.weight;
+      }
+    });
+    if (totalWeight > 0) {
+      return computedCost / totalWeight;
+    }
+  }
+
+  return 0;
+};
+
 export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiques = [], userRole = 'Admin', userBoutique = 'Toutes', categories = [] }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'inventory'>('overview');
   const [activeCategory, setActiveCategory] = useState<string>('Tous');
@@ -88,7 +117,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
           ? (v.stock || 0) + Object.values(v.boutiqueStock || {}).reduce((a, b) => a + b, 0)
           : (isMain ? (v.stock || 0) : (v.boutiqueStock?.[boutiqueFilter] || 0));
         stock += vStock;
-        costValue += vStock * (v.costPrice || p.costPrice || 0);
+        costValue += vStock * getProductCostPrice(p, v.name, products);
         sellValue += vStock * (v.price || p.price);
       });
     } else {
@@ -96,7 +125,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
         ? p.stock + Object.values(p.boutiqueStock || {}).reduce((a, b) => a + b, 0)
         : (isMain ? p.stock : (p.boutiqueStock?.[boutiqueFilter] || 0));
       stock = pStock;
-      costValue = pStock * (p.costPrice || 0);
+      costValue = pStock * getProductCostPrice(p, null, products);
       sellValue = pStock * p.price;
     }
 
@@ -136,14 +165,14 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
           const realizedProfit = filteredInvoices.reduce((acc, inv) => {
              const items = (inv.items || []).filter(i => i.id === p.id && i.selectedVariant?.name === v.name);
              return acc + items.reduce((sum, item) => {
-                 const cost = item.selectedVariant?.costPrice || v.costPrice || p.costPrice || 0;
+                 const cost = item.selectedVariant?.costPrice || getProductCostPrice(p, v.name, products);
                  const price = item.price;
                  return sum + (item.quantity * (price - cost));
              }, 0);
           }, 0);
 
           const price = v.price || p.price;
-          const cost = v.costPrice ?? p.costPrice ?? 0;
+          const cost = getProductCostPrice(p, v.name, products);
 
           list.push({
             name: p.name,
@@ -179,7 +208,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
               return !i.selectedVariant || !hasMatchedVar;
             });
             return acc + items.reduce((sum, item) => {
-              const cost = item.selectedVariant?.costPrice || p.costPrice || 0;
+              const cost = item.selectedVariant?.costPrice || getProductCostPrice(p, item.selectedVariant?.name, products);
               const price = item.price;
               return sum + (item.quantity * (price - cost));
             }, 0);
@@ -190,14 +219,16 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
             ? p.stock + Object.values(p.boutiqueStock || {}).reduce((a, b) => a + b, 0)
             : (isMain ? p.stock : (p.boutiqueStock?.[boutiqueFilter] || 0));
 
+          const baseCost = getProductCostPrice(p, null, products);
+
           list.push({
             name: p.name,
             variantName: 'Sans variante',
             isVariant: true,
-            cost: p.costPrice || 0,
+            cost: baseCost,
             price: p.price,
-            margin: p.price - (p.costPrice || 0),
-            marginPercent: p.costPrice ? ((p.price - p.costPrice) / p.costPrice) * 100 : 100,
+            margin: p.price - baseCost,
+            marginPercent: baseCost ? ((p.price - baseCost) / baseCost) * 100 : 100,
             stock: baseStock,
             unit: p.unit,
             totalProjectedProfit: realizedProfitWithoutRegisteredVar,
@@ -216,20 +247,22 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
         const realizedProfit = filteredInvoices.reduce((acc, inv) => {
             const items = (inv.items || []).filter(i => i.id === p.id);
             return acc + items.reduce((sum, item) => {
-                const cost = item.selectedVariant?.costPrice || p.costPrice || 0;
+                const cost = item.selectedVariant?.costPrice || getProductCostPrice(p, item.selectedVariant?.name, products);
                 const price = item.price;
                 return sum + (item.quantity * (price - cost));
             }, 0);
         }, 0);
 
+        const baseCost = getProductCostPrice(p, null, products);
+
         list.push({
           name: p.name,
           variantName: null,
           isVariant: false,
-          cost: p.costPrice || 0,
+          cost: baseCost,
           price: p.price,
-          margin: p.price - (p.costPrice || 0),
-          marginPercent: p.costPrice ? ((p.price - p.costPrice) / p.costPrice) * 100 : 100,
+          margin: p.price - baseCost,
+          marginPercent: baseCost ? ((p.price - baseCost) / baseCost) * 100 : 100,
           stock: metrics.stock,
           unit: p.unit,
           totalProjectedProfit: realizedProfit,
@@ -252,7 +285,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
           const vStock = boutiqueFilter === 'all' 
             ? (v.stock || 0) + Object.values(v.boutiqueStock || {}).reduce((a, b) => a + b, 0)
             : (isMain ? (v.stock || 0) : (v.boutiqueStock?.[boutiqueFilter] || 0));
-          const unitCost = v.costPrice ?? p.costPrice ?? 0;
+          const unitCost = getProductCostPrice(p, v.name, products);
           const totalValue = vStock * unitCost;
           list.push({
             name: p.name,
@@ -269,7 +302,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
         const pStock = boutiqueFilter === 'all'
           ? p.stock + Object.values(p.boutiqueStock || {}).reduce((a, b) => a + b, 0)
           : (isMain ? p.stock : (p.boutiqueStock?.[boutiqueFilter] || 0));
-        const unitCost = p.costPrice || 0;
+        const unitCost = getProductCostPrice(p, null, products);
         const totalValue = pStock * unitCost;
         list.push({
           name: p.name,

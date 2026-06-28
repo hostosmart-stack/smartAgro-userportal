@@ -699,6 +699,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
               name: mixName, // Update name in case it changed
               category: mixCategory, // Update category as selected by the user
               recipe: recipe,
+              costPrice: mixCostPerKg, // Save calculated ingredient cost
               // We don't change stock here
           };
           notify("Recette mise à jour", "success");
@@ -709,7 +710,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
             category: mixCategory, // Use dynamic mixCategory
             price: 0,
             wholesalePrice: 0,
-            costPrice: 0,
+            costPrice: mixCostPerKg, // Save calculated ingredient cost
             stock: 0,
             unit: 'kg',
             description: `Formule maison.`,
@@ -722,7 +723,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
               type: 'AJUSTEMENT',
               quantity: 0,
               note: 'Création Recette',
-              unitCost: 0
+              unitCost: mixCostPerKg
             }]
           };
           notify("Nouvelle formule créée", "success");
@@ -878,6 +879,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
               ...existingFormula,
               stock: existingFormula.stock + targetWeightInKg,
               recipe: recipe,
+              costPrice: mixCostPerKg, // Update calculated production cost
               history: [newMovement, ...(existingFormula.history || [])]
           };
       } else {
@@ -887,7 +889,7 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
             category: mixCategory,
             price: 0,
             wholesalePrice: 0,
-            costPrice: 0,
+            costPrice: mixCostPerKg, // Update calculated production cost
             stock: targetWeightInKg,
             unit: 'kg',
             description: `Formule maison.`,

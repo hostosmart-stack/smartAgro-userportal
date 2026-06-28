@@ -22,6 +22,35 @@ interface AccountingProps {
 
 type TimeRange = 'today' | 'week' | 'month' | 'year' | 'all';
 
+const getProductCostPrice = (product: Product, variantName?: string | null, productsList: Product[] = []) => {
+  if (variantName) {
+    const variant = product.variants?.find(v => v.name === variantName);
+    if (variant?.costPrice) return variant.costPrice;
+  }
+  if (product.costPrice) return product.costPrice;
+
+  // Fallback to recipe if formula
+  if (product.recipe && product.recipe.length > 0) {
+    let computedCost = 0;
+    let totalWeight = 0;
+    product.recipe.forEach(ingredient => {
+      const ingredientProduct = productsList.find(p => p.id === ingredient.productId);
+      if (ingredientProduct) {
+        const ingredientCost = ingredient.variantName
+          ? (ingredientProduct.variants?.find(v => v.name === ingredient.variantName)?.costPrice || ingredientProduct.costPrice || ingredientProduct.price || 0)
+          : (ingredientProduct.costPrice || ingredientProduct.price || 0);
+        computedCost += ingredientCost * ingredient.weight;
+        totalWeight += ingredient.weight;
+      }
+    });
+    if (totalWeight > 0) {
+      return computedCost / totalWeight;
+    }
+  }
+
+  return 0;
+};
+
 export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expenses, transfers = [], onUpdateInvoice, boutiques = [], userRole = 'Admin', userBoutique = 'Toutes', customers = [], currentProvenderieId, employees = [] }) => {
   const { notify } = useNotifications();
   const [activeTab, setActiveTab] = useState<'expenses' | 'debts' | 'transfers'>(() => {
@@ -271,24 +300,20 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
   const totalCOGS = useMemo(() => {
     const getMultiplier = (unit: string) => {
       if (unit === 'Sac 50kg') return 50;
+      if (unit === 'Sac 40kg') return 40;
       if (unit === 'Sac 25kg') return 25;
       return 1;
     };
 
     return filteredInvoices.reduce((acc, inv) => {
       const invoiceCost = (inv.items || []).reduce((sum, item) => {
-        let unitCost = item.selectedVariant?.costPrice ?? item.costPrice;
+        let unitCost = item.selectedVariant?.costPrice || item.costPrice || 0;
         
         // Fallback to current product catalog if cost is missing or 0
         if (!unitCost) {
            const currentProduct = products.find(p => p.id === item.id);
            if (currentProduct) {
-               if (item.selectedVariant) {
-                   const currentVariant = currentProduct.variants?.find(v => v.name === item.selectedVariant?.name);
-                   unitCost = currentVariant?.costPrice;
-               } else {
-                   unitCost = currentProduct.costPrice;
-               }
+               unitCost = getProductCostPrice(currentProduct, item.selectedVariant?.name, products);
            }
         }
         
