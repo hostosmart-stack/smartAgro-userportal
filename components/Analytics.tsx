@@ -401,7 +401,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ products, invoices, boutiq
     <div className="space-y-8 animate-in fade-in duration-500 overflow-y-auto h-full pb-20 scrollbar-hide">
       
       {/* --- HEADER --- */}
-      <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 border-b border-gray-100 pb-3 bg-white/50 backdrop-blur-sm sticky top-0 z-20 -mx-6 px-6 pt-2 items-center text-center md:items-start md:text-left">
+      <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 border-b border-gray-100 pb-3 bg-white/50 backdrop-blur-sm sticky top-0 z-20 -mx-6 px-6 pt-2 items-center text-center md:items-start md:text-left print:hidden">
         <div className="flex flex-col items-center md:items-start">
            <h2 className="text-2xl font-display font-bold text-gray-900 tracking-tight flex items-center justify-center md:justify-start gap-2.5">
                <div className="p-1.5 bg-blue-50 rounded-lg">

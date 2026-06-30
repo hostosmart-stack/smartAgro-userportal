@@ -24,35 +24,20 @@
 }
 
 @media print {
-  /* 1. Reset high level containers */
-  html, body {
-    background: white !important;
-    color: black !important;
-    height: auto !important;
-    min-height: auto !important;
-    overflow: visible !important;
+  /* 1. Global Page and High Level Reset */
+  @page {
+    size: auto;
+    margin: 10mm;
   }
 
-  /* 2. Hide everything under body by default using visibility */
-  body * {
-    visibility: hidden !important;
-  }
-
-  /* 3. Re-enable visibility for the printable elements and ALL of their ancestors */
-  *:has(.printable-content),
-  *:has(.print-only),
-  .printable-content,
-  .printable-content *,
-  .print-only,
-  .print-only * {
-    visibility: visible !important;
-  }
-
-  /* 4. Reset layout constraints of ALL parent containers of printable content to prevent clipping, height constraints, flexbox squishing, and overflow-hidden */
-  *:has(.printable-content),
-  *:has(.print-only) {
-    display: block !important;
+  html, 
+  body, 
+  #root, 
+  #root > div, 
+  main,
+  main > div {
     position: static !important;
+    display: block !important;
     float: none !important;
     height: auto !important;
     min-height: auto !important;
@@ -65,7 +50,7 @@
     padding: 0 !important;
     border: none !important;
     box-shadow: none !important;
-    background: transparent !important;
+    background: white !important;
     transform: none !important;
     transition: none !important;
     animation: none !important;
@@ -74,7 +59,34 @@
     backdrop-filter: none !important;
   }
 
-  /* 5. Specific overrides for printable content components */
+  /* 2. Hide everything under body by default using standard visibility */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* 3. Re-enable visibility for the printable elements and ALL of their descendants */
+  .printable-content,
+  .printable-content *,
+  .print-only,
+  .print-only * {
+    visibility: visible !important;
+  }
+
+  /* 4. Reset overflow and heights of nested layouts inside print view */
+  .overflow-x-auto,
+  .overflow-y-auto,
+  .overflow-hidden,
+  .h-full,
+  .min-h-screen,
+  .scrollbar-hide,
+  .premium-scrollbar {
+    overflow: visible !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+  }
+
+  /* 5. Specific layout overrides for printable components */
   .printable-content,
   .print-only {
     display: block !important;
@@ -92,7 +104,7 @@
     opacity: 1 !important;
   }
 
-  /* Ensure deep nested elements inside printable-content are visible and styled correctly for printing */
+  /* 6. Ensure deep nested elements inside printable-content are styled correctly for printing */
   .printable-content *,
   .print-only * {
     color: black !important;
@@ -102,7 +114,12 @@
     box-shadow: none !important;
   }
 
-  /* Maintain backgrounds for highlighted elements, badges, or headers */
+  /* 7. Retain essential background colors and colors on prints */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   .printable-content .bg-slate-900,
   .printable-content .bg-slate-800,
   .print-only .bg-slate-900 {
@@ -127,7 +144,7 @@
     color: white !important;
   }
 
-  /* Ensure text is clearly visible */
+  /* Ensure text colors are clear */
   .printable-content .text-emerald-600,
   .printable-content .text-emerald-700 {
     color: #15803d !important; /* dark green for print */
@@ -141,23 +158,30 @@
     color: #1d4ed8 !important; /* dark blue for print */
   }
 
-  /* Completely hide non-printable panels and buttons so they never occupy space or cause blank pages */
+  /* 8. Table specific overrides to prevent horizontal truncation */
+  table {
+    min-width: 0 !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  th, td {
+    word-break: break-word !important;
+  }
+
+  /* 9. Completely hide non-printable panels and buttons */
   aside, 
   header, 
   nav, 
   button,
-  .print\:hidden {
+  .print\:hidden,
+  .no-print {
     display: none !important;
     height: 0 !important;
     width: 0 !important;
     overflow: hidden !important;
     margin: 0 !important;
     padding: 0 !important;
-  }
-
-  @page {
-    size: auto;
-    margin: 10mm;
   }
 }
 

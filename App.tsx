@@ -822,8 +822,8 @@ const InnerApp = () => {
               )}
               
               <div className="flex items-center gap-2 min-w-0 flex-1">
-                <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-2 rounded-xl shadow-[0_2px_10px_rgba(16,185,129,0.2)] shrink-0">
-                  <Leaf className="w-3.5 h-3.5 text-white" />
+                <div className="bg-white p-1.5 rounded-xl border border-gray-150 shadow-sm shrink-0 flex items-center justify-center">
+                  <img src="/pwa-192.svg" alt="Smart Agro Logo" className="w-4 h-4 object-contain" referrerPolicy="no-referrer" />
                 </div>
                 <div className="flex flex-col min-w-0 flex-1">
                   <h1 className="font-display font-black text-xs sm:text-sm tracking-tight text-white leading-none truncate max-w-[120px] xs:max-w-[160px] sm:max-w-none">

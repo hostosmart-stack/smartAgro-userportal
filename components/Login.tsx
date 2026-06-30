@@ -158,8 +158,8 @@ export const Login: React.FC<LoginProps> = ({ onBack, onLoginSuccess }) => {
       <div className="flex-1 flex items-center justify-center p-6">
          <div className="w-full max-w-md">
             <div className="text-center mb-10">
-               <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-farm-600 text-white shadow-xl shadow-farm-200 mb-6">
-                  <Leaf className="w-8 h-8" />
+               <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white border border-gray-150 p-2 shadow-xl shadow-slate-200/50 mb-6">
+                  <img src="/pwa-192.svg" alt="Logo" className="w-10 h-10 object-contain" referrerPolicy="no-referrer" />
                </div>
                <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">{t('login.welcome')}</h2>
                <p className="text-gray-500 mt-2">{t('login.subtitle')}</p>
