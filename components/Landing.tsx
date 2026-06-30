@@ -241,8 +241,8 @@ export const Landing: React.FC<LandingProps> = ({ onLoginClick }) => {
       <div className="fixed top-4 left-4 right-4 z-50 max-w-7xl mx-auto shrink-0">
         <nav className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-gray-150/20 dark:border-slate-800/80 rounded-2xl shadow-[0_10px_35px_rgba(0,0,0,0.03)] dark:shadow-[0_10px_35px_rgba(0,0,0,0.4)] py-2.5 px-3 sm:px-6 md:px-8 flex items-center justify-between transition-all duration-300 gap-2 min-w-0">
           <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-            <div className="bg-gradient-to-tr from-farm-600 to-emerald-700 p-2 sm:p-2.5 rounded-xl sm:rounded-2xl shadow-sm shrink-0">
-               <Leaf className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-white" />
+            <div className="bg-white p-1.5 sm:p-2 rounded-xl sm:rounded-2xl border border-gray-150 shadow-sm shrink-0 flex items-center justify-center">
+               <img src="/pwa-192.svg" alt="Smart Agro Logo" className="w-4 h-4 sm:w-6 sm:h-6 object-contain" referrerPolicy="no-referrer" />
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-sm sm:text-lg font-black text-gray-950 tracking-tight leading-none truncate">Smart Agro</span>

@@ -24,60 +24,35 @@
 }
 
 @media print {
-  /* Hide all non-printable content by default */
+  /* 1. Reset high level containers */
+  html, body {
+    background: white !important;
+    color: black !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* 2. Hide everything under body by default using visibility */
   body * {
     visibility: hidden !important;
   }
-  
-  /* Show only the printable content and its elements */
+
+  /* 3. Re-enable visibility for the printable elements and ALL of their ancestors */
+  *:has(.printable-content),
+  *:has(.print-only),
   .printable-content,
-  .printable-content * {
+  .printable-content *,
+  .print-only,
+  .print-only * {
     visibility: visible !important;
   }
 
-  /* Force display and override any display:none, print:hidden, opacities, scale, filters, or transitions on parent containers of printable content */
-  *:has(.printable-content) {
+  /* 4. Reset layout constraints of ALL parent containers of printable content to prevent clipping, height constraints, flexbox squishing, and overflow-hidden */
+  *:has(.printable-content),
+  *:has(.print-only) {
     display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    transform: none !important;
-    backdrop-filter: none !important;
-    filter: none !important;
-    animation: none !important;
-    transition: none !important;
     position: static !important;
-    height: auto !important;
-    width: auto !important;
-    overflow: visible !important;
-    box-shadow: none !important;
-    border: none !important;
-    background: transparent !important;
-  }
-  
-  /* Centered positioning relative to the paper viewport */
-  .printable-content {
-    position: relative !important;
-    margin: 0 auto !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    height: auto !important;
-    min-height: auto !important;
-    padding: 10px !important;
-    background: white !important;
-    color: black !important;
-    box-sizing: border-box !important;
-    z-index: 9999999 !important;
-  }
-
-  /* Reset layout constraints of high-level parent containers specifically.
-     This avoids using wildcard class selectors which ruin nested flexbox/grid layouts inside printable content. */
-  html, 
-  body, 
-  #root, 
-  #root > div, 
-  main {
-    position: static !important;
-    display: block !important;
     float: none !important;
     height: auto !important;
     min-height: auto !important;
@@ -87,14 +62,83 @@
     max-width: none !important;
     overflow: visible !important;
     margin: 0 !important;
-    margin-left: 0 !important;
     padding: 0 !important;
     border: none !important;
     box-shadow: none !important;
-    background: white !important;
+    background: transparent !important;
     transform: none !important;
     transition: none !important;
     animation: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  /* 5. Specific overrides for printable content components */
+  .printable-content,
+  .print-only {
+    display: block !important;
+    position: relative !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    background: white !important;
+    color: black !important;
+    box-sizing: border-box !important;
+    z-index: 9999999 !important;
+    overflow: visible !important;
+    opacity: 1 !important;
+  }
+
+  /* Ensure deep nested elements inside printable-content are visible and styled correctly for printing */
+  .printable-content *,
+  .print-only * {
+    color: black !important;
+    background-color: transparent !important;
+    border-color: #cbd5e1 !important; /* light gray borders */
+    text-shadow: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Maintain backgrounds for highlighted elements, badges, or headers */
+  .printable-content .bg-slate-900,
+  .printable-content .bg-slate-800,
+  .print-only .bg-slate-900 {
+    background-color: #0f172a !important; /* slate-900 */
+    color: white !important;
+  }
+
+  .printable-content .bg-slate-50,
+  .printable-content .bg-slate-100,
+  .printable-content .bg-gray-50,
+  .printable-content .bg-gray-100 {
+    background-color: #f8fafc !important; /* slate-50 */
+  }
+
+  .printable-content .bg-farm-50,
+  .printable-content .bg-farm-100 {
+    background-color: #f0fdf4 !important; /* light green */
+  }
+
+  .printable-content .text-white,
+  .print-only .text-white {
+    color: white !important;
+  }
+
+  /* Ensure text is clearly visible */
+  .printable-content .text-emerald-600,
+  .printable-content .text-emerald-700 {
+    color: #15803d !important; /* dark green for print */
+  }
+
+  .printable-content .text-rose-600 {
+    color: #be123c !important; /* dark red for print */
+  }
+
+  .printable-content .text-blue-600 {
+    color: #1d4ed8 !important; /* dark blue for print */
   }
 
   /* Completely hide non-printable panels and buttons so they never occupy space or cause blank pages */
@@ -111,15 +155,9 @@
     padding: 0 !important;
   }
 
-  /* Show print-only classes under print */
-  .print-only {
-    display: block !important;
-    visibility: visible !important;
-  }
-
   @page {
     size: auto;
-    margin: 0mm;
+    margin: 10mm;
   }
 }
 

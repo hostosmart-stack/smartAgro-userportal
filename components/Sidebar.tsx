@@ -197,8 +197,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         className={`relative z-10 p-6 ${isMobile ? 'pl-[76px]' : ''} flex items-center ${isCollapsed ? 'justify-center cursor-pointer hover:bg-white/[0.04] transition-colors' : 'gap-3.5'} border-b border-white/[0.04]`}
         title={isCollapsed ? "Cliquez pour agrandir" : undefined}
       >
-        <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-rose-500 via-pink-500 to-amber-400 p-2.5 shadow-lg shadow-rose-500/20 border border-white/10 shrink-0 flex items-center justify-center font-display font-black text-white text-base">
-           S
+        <div className="w-10 h-10 rounded-2xl bg-white/5 p-1.5 shadow-md border border-white/10 shrink-0 flex items-center justify-center">
+           <img src="/pwa-192.svg" alt="Smart Agro Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
         </div>
         {!isCollapsed && (
           <div className="overflow-hidden whitespace-nowrap">

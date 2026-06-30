@@ -104,8 +104,8 @@ export const Hub: React.FC<HubProps> = ({
           
           {/* Brand block on Left */}
           <div className="flex items-center gap-4 group">
-            <div className="bg-gradient-to-br from-[#10b981] to-[#059669] p-3 rounded-2xl text-white flex items-center justify-center shadow-[0_8px_20px_-4px_rgba(16,185,129,0.3)] dark:shadow-[0_8px_24px_-6px_rgba(16,185,129,0.4)] hover:scale-105 hover:rotate-3 active:scale-95 transition-all duration-300">
-              <LayoutGrid className="w-6 h-6 text-white" />
+            <div className="bg-white dark:bg-slate-900 p-2 rounded-2xl flex items-center justify-center shadow-[0_8px_20px_-4px_rgba(16,185,129,0.2)] dark:shadow-[0_8px_24px_-6px_rgba(16,185,129,0.3)] hover:scale-105 hover:rotate-3 active:scale-95 transition-all duration-300 border border-slate-200/50 dark:border-slate-800">
+              <img src="/pwa-192.svg" alt="PWA Logo" className="w-8 h-8 object-contain" referrerPolicy="no-referrer" />
             </div>
             <div className="flex flex-col text-left">
               <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-none uppercase group-hover:text-[#10b981] transition-colors">
