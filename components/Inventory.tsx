@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Product, Category, StockMovement, ProductVariant, Boutique } from '../types';
-import { Search, Plus, Edit2, Trash2, Save, Filter, Package, FlaskConical, X, RefreshCw, History, Tag, TrendingUp, Wallet, Coins, Scale, Loader2, Factory, ScrollText, Printer, CornerDownRight, ArrowRightLeft, ChevronDown, CheckCircle } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Save, Filter, Package, FlaskConical, X, RefreshCw, History, Tag, TrendingUp, Wallet, Coins, Scale, Loader2, Factory, ScrollText, Printer, CornerDownRight, ArrowRightLeft, ChevronDown, CheckCircle, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { saveProduct, deleteProduct, clearAllFormulas } from '../services/db';
 import { useNotifications } from './ui/Notifications';
 import { formatStock } from '../utils';
@@ -27,6 +27,47 @@ interface MixIngredient {
 export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admin', userPermissions = [], userBoutique = 'Toutes', boutiques = [], onNavigate, onTransferProduct, currentProvenderieId, categories = [] }) => {
   const { t } = useLanguage();
   const { notify } = useNotifications();
+
+  const [showAnnotations, setShowAnnotations] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('smart_agro_show_annotations');
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const handleToggleAnnotations = () => {
+    setShowAnnotations(prev => {
+      const newVal = !prev;
+      try {
+        localStorage.setItem('smart_agro_show_annotations', JSON.stringify(newVal));
+        window.dispatchEvent(new Event('storage_annotations_changed'));
+      } catch (e) {
+        console.warn('Failed to save annotation settings', e);
+      }
+      return newVal;
+    });
+  };
+
+  useEffect(() => {
+    const handleSync = () => {
+      try {
+        const saved = localStorage.getItem('smart_agro_show_annotations');
+        if (saved !== null) {
+          setShowAnnotations(JSON.parse(saved));
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    window.addEventListener('storage_annotations_changed', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener('storage_annotations_changed', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
+  }, []);
   
   const isInventoryAdmin = userRole === 'Admin' || 
                            userRole.toLowerCase().trim() === 'superadmin' || 
@@ -1605,7 +1646,31 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
             <h2 className="text-2xl font-bold font-display text-gray-900">{t('inventory.title')}</h2>
             <p className="text-sm text-gray-500 font-medium mt-1">{t('inventory.subtitle')}</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+             {/* Shared Annotation Toggle Switcher */}
+             <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-xl shadow-xs hover:border-emerald-500/50 transition-all shrink-0">
+                <span className="relative flex h-2 w-2">
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${showAnnotations ? 'bg-emerald-400' : 'bg-slate-400'}`}></span>
+                  <span className={`relative inline-flex rounded-full h-2 w-2 ${showAnnotations ? 'bg-emerald-500' : 'bg-gray-400'}`}></span>
+                </span>
+                <button
+                  type="button"
+                  onClick={handleToggleAnnotations}
+                  className="flex items-center gap-1.5 font-black text-[10px] uppercase tracking-wider text-slate-600 hover:text-emerald-600 transition-colors cursor-pointer select-none"
+                >
+                  {showAnnotations ? (
+                    <>
+                      <EyeOff className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="text-emerald-600 font-extrabold">Annotations : On</span>
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="text-slate-500">Annotations : Off</span>
+                    </>
+                  )}
+                </button>
+             </div>
             {(isInventoryAdmin || userPermissions.includes('formulas')) && (
               <button 
                   onClick={() => setIsMixing(true)}
@@ -1624,6 +1689,39 @@ export const Inventory: React.FC<InventoryProps> = ({ products, userRole = 'Admi
             )}
           </div>
       </div>
+
+      {/* Annotations for Inventory */}
+      {showAnnotations && (
+        <div className="mx-6 mt-6 p-6 bg-emerald-50/40 border border-emerald-500/20 rounded-2xl flex flex-col md:flex-row gap-6 text-left animate-in fade-in duration-300 shadow-3xs shrink-0">
+          <div className="flex items-start gap-4 flex-1">
+            <span className="w-6 h-6 rounded-full bg-[#137333] text-white flex items-center justify-center font-black text-xs shrink-0 mt-0.5 shadow-sm">
+              6
+            </span>
+            <div className="space-y-1">
+              <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm uppercase tracking-wider">
+                Mélangeur & Formulation Alimentaire
+              </h4>
+              <p className="text-xs text-slate-500 leading-relaxed font-semibold">
+                Formulez des recettes animales de haute précision en estimant automatiquement les prix d'achat d'après la composition des ingrédients.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-start gap-4 flex-1 border-t md:border-t-0 md:border-l border-slate-200/65 pt-4 md:pt-0 md:pl-6">
+            <span className="w-6 h-6 rounded-full bg-[#137333] text-white flex items-center justify-center font-black text-xs shrink-0 mt-0.5 shadow-sm">
+              7
+            </span>
+            <div className="space-y-1">
+              <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm uppercase tracking-wider">
+                Filtres de Catégories & Stock d'Alerte
+              </h4>
+              <p className="text-xs text-slate-500 leading-relaxed font-semibold">
+                Suivez en temps réel les seuils d'alertes bas des intrants et les stocks d'équipements pour un pilotage sans rupture.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* --- FILTERS --- */}
       <div className="p-3 md:p-4 border-b border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row gap-3 md:gap-4 shrink-0">

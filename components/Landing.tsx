@@ -20,6 +20,135 @@ import {
 import { useLanguage } from '../contexts/LanguageContext';
 import { PWAInstallModal } from './PWAInstallModal';
 
+const TerrainBackground: React.FC = () => {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10 select-none">
+      {/* Dynamic Topographic Terrain Background SVG */}
+      <svg
+        className="absolute top-0 left-0 w-full h-[1200px] opacity-[0.25]"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 1440 1200"
+        preserveAspectRatio="none"
+      >
+        <defs>
+          <linearGradient id="terrain-grad-1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#F1EDE2" stopOpacity="0.8" />
+            <stop offset="50%" stopColor="#EADEC9" stopOpacity="0.4" />
+            <stop offset="100%" stopColor="#FAF9F5" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="terrain-grad-2" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#137333" stopOpacity="0.04" />
+            <stop offset="50%" stopColor="#10b981" stopOpacity="0.01" />
+            <stop offset="100%" stopColor="#FAF9F5" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="contour-stroke-1" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#D8CDAF" stopOpacity="0.05" />
+            <stop offset="50%" stopColor="#C4B791" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#A89A70" stopOpacity="0.05" />
+          </linearGradient>
+          <linearGradient id="contour-stroke-2" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#137333" stopOpacity="0.01" />
+            <stop offset="50%" stopColor="#137333" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="#137333" stopOpacity="0.01" />
+          </linearGradient>
+        </defs>
+
+        {/* Level 1: Gentle organic ground swell representing agricultural terrain */}
+        <path
+          d="M0,150 C300,100 600,280 900,160 C1200,40 1350,180 1440,120 L1440,1200 L0,1200 Z"
+          fill="url(#terrain-grad-1)"
+        />
+
+        {/* Level 2: Secondary terraced field curve */}
+        <path
+          d="M0,350 C360,250 720,450 1080,320 C1260,250 1380,300 1440,330 L1440,1200 L0,1200 Z"
+          fill="url(#terrain-grad-2)"
+        />
+
+        {/* Level 3: Lower farm contour */}
+        <path
+          d="M0,580 C300,500 600,680 900,560 C1200,440 1350,590 1440,550 L1440,1200 L0,1200 Z"
+          fill="url(#terrain-grad-1)"
+        />
+
+        {/* Precision Contour Lines / Elevation Grids */}
+        <path
+          d="M0,220 C300,120 600,320 900,170 C1200,20 1350,170 1440,120"
+          fill="none"
+          stroke="url(#contour-stroke-1)"
+          strokeWidth="1.5"
+        />
+        <path
+          d="M0,300 C300,200 600,400 900,250 C1200,100 1350,250 1440,200"
+          fill="none"
+          stroke="url(#contour-stroke-1)"
+          strokeWidth="1.2"
+          strokeDasharray="4,4"
+        />
+        <path
+          d="M0,380 C300,280 600,480 900,330 C1200,180 1350,330 1440,280"
+          fill="none"
+          stroke="url(#contour-stroke-2)"
+          strokeWidth="1.5"
+        />
+        <path
+          d="M0,460 C300,360 600,560 900,410 C1200,260 1350,410 1440,360"
+          fill="none"
+          stroke="url(#contour-stroke-1)"
+          strokeWidth="1"
+        />
+        <path
+          d="M0,540 C300,440 600,640 900,490 C1200,340 1350,490 1440,440"
+          fill="none"
+          stroke="url(#contour-stroke-2)"
+          strokeWidth="1"
+          strokeDasharray="6,3"
+        />
+        <path
+          d="M0,620 C300,520 600,720 900,570 C1200,420 1350,570 1440,520"
+          fill="none"
+          stroke="url(#contour-stroke-1)"
+          strokeWidth="1.5"
+        />
+        <path
+          d="M0,700 C300,600 600,800 900,650 C1200,500 1350,650 1440,600"
+          fill="none"
+          stroke="url(#contour-stroke-1)"
+          strokeWidth="1"
+        />
+        <path
+          d="M0,780 C300,680 600,880 900,730 C1200,580 1350,730 1440,680"
+          fill="none"
+          stroke="url(#contour-stroke-2)"
+          strokeWidth="1.2"
+          strokeDasharray="4,4"
+        />
+
+        {/* Custom agricultural field markers (Topographic altitude markers) */}
+        <g fill="#137333" opacity="0.35" fontSize="9" fontFamily="monospace" fontWeight="bold">
+          <circle cx="280" cy="180" r="1.5" />
+          <text x="288" y="183">ALT 420m</text>
+          
+          <circle cx="820" cy="290" r="1.5" />
+          <text x="828" y="293">ALT 380m</text>
+
+          <circle cx="450" cy="480" r="1.5" />
+          <text x="458" y="483">ALT 310m</text>
+
+          <circle cx="1120" cy="220" r="1.5" />
+          <text x="1128" y="223">ALT 490m</text>
+
+          <circle cx="150" cy="620" r="1.5" />
+          <text x="158" y="623">ALT 240m</text>
+
+          <circle cx="950" cy="680" r="1.5" />
+          <text x="958" y="683">ALT 195m</text>
+        </g>
+      </svg>
+    </div>
+  );
+};
+
 interface LandingProps {
   onLoginClick: () => void;
 }
@@ -103,9 +232,12 @@ export const Landing: React.FC<LandingProps> = ({ onLoginClick }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF9F5] text-slate-900 font-sans selection:bg-farm-500 selection:text-white overflow-x-hidden">
+    <div className="relative min-h-screen bg-[#FAF9F5] text-slate-900 font-sans selection:bg-farm-500 selection:text-white overflow-x-hidden">
       
-      {/* 1. Header & Navigation */}
+      {/* 1. Terrain Background */}
+      <TerrainBackground />
+
+      {/* 2. Header & Navigation */}
       <div className="fixed top-4 left-4 right-4 z-50 max-w-7xl mx-auto shrink-0">
         <nav className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-gray-150/20 dark:border-slate-800/80 rounded-2xl shadow-[0_10px_35px_rgba(0,0,0,0.03)] dark:shadow-[0_10px_35px_rgba(0,0,0,0.4)] py-2.5 px-3 sm:px-6 md:px-8 flex items-center justify-between transition-all duration-300 gap-2 min-w-0">
           <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
@@ -158,11 +290,27 @@ export const Landing: React.FC<LandingProps> = ({ onLoginClick }) => {
       </div>
 
       {/* 2. Hero Section */}
-      <section className="pt-24 sm:pt-32 pb-16 sm:pb-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto relative">
+      <section className="relative w-full overflow-hidden pt-24 sm:pt-32 pb-20 sm:pb-28">
          {/* Cozy ambient gradient shapes behind */}
          <div className="absolute top-1/4 right-1/4 w-72 sm:w-96 h-72 sm:h-96 bg-gradient-to-tr from-farm-500/5 to-blue-500/5 rounded-full blur-[80px] pointer-events-none -z-10"></div>
          
-         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center text-left">
+         {/* Terrain Crop Field Background (Full Bleed) */}
+         <div className="absolute bottom-0 left-0 right-0 h-[48%] pointer-events-none z-0">
+           <img 
+              src="https://images.unsplash.com/photo-1625246333195-78d9c38ad449?auto=format&fit=crop&q=80&w=1600" 
+              alt="Terrain Background"
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-cover object-bottom opacity-40 saturate-[1.1] brightness-[1.02]"
+           />
+           {/* Soft fade-in mask from top */}
+           <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#FAF9F5] via-[#FAF9F5]/70 to-transparent"></div>
+           {/* Soft fade-out mask to bottom to transition to the white core section */}
+           <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#FAF9F5] via-[#FAF9F5]/30 to-transparent"></div>
+         </div>
+
+         {/* Content container */}
+         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center text-left">
             
             {/* Left Narrative Column */}
             <div className="lg:col-span-7 space-y-5 sm:space-y-6">
@@ -334,6 +482,7 @@ export const Landing: React.FC<LandingProps> = ({ onLoginClick }) => {
                </div>
             </div>
 
+         </div>
          </div>
       </section>
 

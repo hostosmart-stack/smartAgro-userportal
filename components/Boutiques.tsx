@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Product, Category, ProductVariant, Boutique, StockTransfer, UserRole } from '../types';
-import { Store, ArrowRight, Save, Search, AlertCircle, Package, Plus, Edit2, Trash2, MapPin, X, Loader2, AlertTriangle } from 'lucide-react';
+import { Store, ArrowRight, Save, Search, AlertCircle, Package, Plus, Edit2, Trash2, MapPin, X, Loader2, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { saveProduct, saveBoutique, deleteBoutique } from '../services/db';
 import { useNotifications } from './ui/Notifications';
 import { formatStock } from '../utils';
@@ -19,6 +19,48 @@ interface BoutiquesProps {
 
 export const Boutiques: React.FC<BoutiquesProps> = ({ products, boutiques = [], userRole = 'Admin', userBoutique = 'Toutes', transfers = [], currentProvenderieId, userRoleObj, categories = [] }) => {
   const { notify } = useNotifications();
+
+  const [showAnnotations, setShowAnnotations] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('smart_agro_show_annotations');
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const handleToggleAnnotations = () => {
+    setShowAnnotations(prev => {
+      const newVal = !prev;
+      try {
+        localStorage.setItem('smart_agro_show_annotations', JSON.stringify(newVal));
+        window.dispatchEvent(new Event('storage_annotations_changed'));
+      } catch (e) {
+        console.warn('Failed to save annotation settings', e);
+      }
+      return newVal;
+    });
+  };
+
+  React.useEffect(() => {
+    const handleSync = () => {
+      try {
+        const saved = localStorage.getItem('smart_agro_show_annotations');
+        if (saved !== null) {
+          setShowAnnotations(JSON.parse(saved));
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    window.addEventListener('storage_annotations_changed', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener('storage_annotations_changed', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
+  }, []);
+
   const [activeTab, setActiveTab] = useState<'overview' | 'transfers'>('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('Tout');
@@ -248,24 +290,82 @@ export const Boutiques: React.FC<BoutiquesProps> = ({ products, boutiques = [], 
             <p className="text-gray-500 text-sm mt-1">Gérez les points de vente, stocks et transferts.</p>
          </div>
 
-         {canManageBoutiques && (
-             <div className="flex flex-wrap gap-3 items-center">
-                 <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-xl border border-gray-200">
-                     {boutiques
-                       .filter(b => userBoutique === 'Toutes' || b.id === userBoutique || b.name === userBoutique)
-                       .map(b => (
-                         <button
-                            key={b.id}
-                            onClick={() => setSelectedBoutiqueId(b.id)}
-                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${selectedBoutiqueId === b.id ? 'bg-white shadow-sm text-farm-700' : 'text-gray-500 hover:text-gray-700'}`}
-                         >
-                             {b.name}
-                         </button>
-                     ))}
-                 </div>
+         <div className="flex flex-wrap gap-3 items-center">
+             {/* Shared Annotation Toggle Switcher */}
+             <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3.5 py-2.5 h-12 rounded-xl shadow-xs hover:border-emerald-500/50 transition-all shrink-0">
+                <span className="relative flex h-2 w-2">
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${showAnnotations ? 'bg-emerald-400' : 'bg-slate-400'}`}></span>
+                  <span className={`relative inline-flex rounded-full h-2 w-2 ${showAnnotations ? 'bg-emerald-500' : 'bg-gray-400'}`}></span>
+                </span>
+                <button
+                  type="button"
+                  onClick={handleToggleAnnotations}
+                  className="flex items-center gap-1.5 font-black text-[10px] uppercase tracking-wider text-slate-600 hover:text-emerald-600 transition-colors cursor-pointer select-none"
+                >
+                  {showAnnotations ? (
+                    <>
+                      <EyeOff className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="text-emerald-600 font-extrabold">Annotations : On</span>
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="text-slate-500">Annotations : Off</span>
+                    </>
+                  )}
+                </button>
              </div>
-         )}
+
+             {canManageBoutiques && (
+                  <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-xl border border-gray-200 h-12">
+                      {boutiques
+                        .filter(b => userBoutique === 'Toutes' || b.id === userBoutique || b.name === userBoutique)
+                        .map(b => (
+                          <button
+                             key={b.id}
+                             onClick={() => setSelectedBoutiqueId(b.id)}
+                             className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${selectedBoutiqueId === b.id ? 'bg-white shadow-sm text-farm-700' : 'text-gray-500 hover:text-gray-700'}`}
+                          >
+                              {b.name}
+                          </button>
+                      ))}
+                  </div>
+             )}
+         </div>
       </div>
+
+      {/* Annotations for Boutiques */}
+      {showAnnotations && (
+        <div className="p-6 bg-emerald-50/40 border border-emerald-500/20 rounded-2xl flex flex-col md:flex-row gap-6 text-left animate-in fade-in duration-300 shadow-3xs">
+          <div className="flex items-start gap-4 flex-1">
+            <span className="w-6 h-6 rounded-full bg-[#137333] text-white flex items-center justify-center font-black text-xs shrink-0 mt-0.5 shadow-sm">
+              16
+            </span>
+            <div className="space-y-1">
+              <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm uppercase tracking-wider">
+                Multi-Boutique & Distribution
+              </h4>
+              <p className="text-xs text-slate-500 leading-relaxed font-semibold">
+                Basculez entre vos différents points de vente pour gérer les stocks de manière cloisonnée et transférer des matières premières.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-start gap-4 flex-1 border-t md:border-t-0 md:border-l border-slate-200/65 pt-4 md:pt-0 md:pl-6">
+            <span className="w-6 h-6 rounded-full bg-[#137333] text-white flex items-center justify-center font-black text-xs shrink-0 mt-0.5 shadow-sm">
+              17
+            </span>
+            <div className="space-y-1">
+              <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm uppercase tracking-wider">
+                Transfert Inter-Dépôt Sécurisé
+              </h4>
+              <p className="text-xs text-slate-500 leading-relaxed font-semibold">
+                Émettez des bons de transfert de stock en désignant les quantités exactes pour approvisionner vos boutiques.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex border-b border-gray-200 mb-6">

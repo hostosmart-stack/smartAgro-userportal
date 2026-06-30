@@ -24,7 +24,7 @@
 }
 
 @media print {
-  /* Hide all non-printable content */
+  /* Hide all non-printable content by default */
   body * {
     visibility: hidden !important;
   }
@@ -69,55 +69,46 @@
     z-index: 9999999 !important;
   }
 
-  /* Reset layout constraints of all possible parent containers.
-     Setting 'position: static' ensures that elements resolve relative to the body/page.
-     Setting 'display: block', 'height: auto', 'overflow: visible' prevents clipping and horizontal/vertical squishing. */
+  /* Reset layout constraints of high-level parent containers specifically.
+     This avoids using wildcard class selectors which ruin nested flexbox/grid layouts inside printable content. */
   html, 
   body, 
   #root, 
   #root > div, 
-  main, 
-  aside, 
-  header, 
-  nav,
-  div[class*="h-"], 
-  div[class*="w-"], 
-  div[class*="overflow-"], 
-  div[class*="flex-"],
-  div[class*="grid-"],
-  div[class*="ml-"],
-  div[class*="p-"],
-  div[class*="max-w-"],
-  div[class*="fixed"],
-  div[class*="inset-"],
-  .fixed,
-  .absolute {
+  main {
     position: static !important;
     display: block !important;
     float: none !important;
     height: auto !important;
     min-height: auto !important;
     max-height: none !important;
-    width: auto !important;
+    width: 100% !important;
     min-width: 0 !important;
     max-width: none !important;
     overflow: visible !important;
     margin: 0 !important;
+    margin-left: 0 !important;
     padding: 0 !important;
     border: none !important;
     box-shadow: none !important;
-    background: transparent !important;
+    background: white !important;
     transform: none !important;
     transition: none !important;
     animation: none !important;
   }
 
-  /* Hide print-hidden classes */
+  /* Completely hide non-printable panels and buttons so they never occupy space or cause blank pages */
+  aside, 
+  header, 
+  nav, 
+  button,
   .print\:hidden {
     display: none !important;
     height: 0 !important;
     width: 0 !important;
     overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   /* Show print-only classes under print */

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#16a34a" />
+      <stop offset="100%" stop-color="#15803d" />
+    </linearGradient>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#FAF9F5" />
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="48" fill="url(#bgGrad)" stroke="#e2e8f0" stroke-width="3"/>
+  <circle cx="96" cy="96" r="64" fill="#f0fdf4" />
+  <path d="M96 45 C120 45 138 64 138 96 C138 128 96 147 96 147 C96 147 54 128 54 96 C54 64 72 45 96 45 Z" fill="url(#leafGrad)" />
+  <path d="M96 45 V147" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" opacity="0.3" />
+  <path d="M96 75 C105 82 116 82 124 78" stroke="#ffffff" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.4" />
+  <path d="M96 98 C105 105 116 105 124 101" stroke="#ffffff" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.4" />
+  <path d="M96 86 C87 93 76 93 68 89" stroke="#ffffff" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.4" />
+  <path d="M96 109 C87 116 76 116 68 112" stroke="#ffffff" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.4" />
+</svg>

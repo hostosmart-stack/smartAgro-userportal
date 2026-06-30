@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Invoice, Product, Expense, Payment, Boutique, StockTransfer, Customer, Employee } from '../types';
-import { Wallet, TrendingDown, TrendingUp, Calendar, Trash2, ArrowDownRight, AlertCircle, CheckCircle2, User, Coins, X, FileText, AlertTriangle, Package, ArrowRight } from 'lucide-react';
+import { Wallet, TrendingDown, TrendingUp, Calendar, Trash2, ArrowDownRight, AlertCircle, CheckCircle2, User, Coins, X, FileText, AlertTriangle, Package, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { deleteExpense, processPaymentRecovery, saveExpense, saveEmployee } from '../services/db';
 import { useNotifications } from './ui/Notifications';
 import { Pagination } from './Pagination';
@@ -53,6 +53,48 @@ const getProductCostPrice = (product: Product, variantName?: string | null, prod
 
 export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expenses, transfers = [], onUpdateInvoice, boutiques = [], userRole = 'Admin', userBoutique = 'Toutes', customers = [], currentProvenderieId, employees = [] }) => {
   const { notify } = useNotifications();
+
+  const [showAnnotations, setShowAnnotations] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('smart_agro_show_annotations');
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const handleToggleAnnotations = () => {
+    setShowAnnotations(prev => {
+      const newVal = !prev;
+      try {
+        localStorage.setItem('smart_agro_show_annotations', JSON.stringify(newVal));
+        window.dispatchEvent(new Event('storage_annotations_changed'));
+      } catch (e) {
+        console.warn('Failed to save annotation settings', e);
+      }
+      return newVal;
+    });
+  };
+
+  React.useEffect(() => {
+    const handleSync = () => {
+      try {
+        const saved = localStorage.getItem('smart_agro_show_annotations');
+        if (saved !== null) {
+          setShowAnnotations(JSON.parse(saved));
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    window.addEventListener('storage_annotations_changed', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener('storage_annotations_changed', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
+  }, []);
+
   const [activeTab, setActiveTab] = useState<'expenses' | 'debts' | 'transfers'>(() => {
     const saved = localStorage.getItem('smartAgro_initialAccountingTab');
     if (saved === 'expenses' || saved === 'debts' || saved === 'transfers') {
@@ -485,6 +527,31 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
                 </button>
              </div>
              
+             {/* Shared Annotation Toggle Switcher */}
+             <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3.5 py-3 h-12 rounded-2xl shadow-xs hover:border-emerald-500/50 transition-all shrink-0">
+                <span className="relative flex h-2 w-2">
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${showAnnotations ? 'bg-emerald-400' : 'bg-slate-400'}`}></span>
+                  <span className={`relative inline-flex rounded-full h-2 w-2 ${showAnnotations ? 'bg-emerald-500' : 'bg-gray-400'}`}></span>
+                </span>
+                <button
+                  type="button"
+                  onClick={handleToggleAnnotations}
+                  className="flex items-center gap-1.5 font-black text-[10px] uppercase tracking-wider text-slate-600 hover:text-emerald-600 transition-colors cursor-pointer select-none"
+                >
+                  {showAnnotations ? (
+                    <>
+                      <EyeOff className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="text-emerald-600 font-extrabold">Annotations : On</span>
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="text-slate-500">Annotations : Off</span>
+                    </>
+                  )}
+                </button>
+             </div>
+
              {isSuperOrAdmin && (
                  <button 
                      onClick={() => setIsExpenseModalOpen(true)}
@@ -496,6 +563,39 @@ export const Accounting: React.FC<AccountingProps> = ({ invoices, products, expe
              )}
           </div>
        </div>
+
+      {/* Annotations for Accounting */}
+      {showAnnotations && (
+        <div className="p-6 bg-emerald-50/40 border border-emerald-500/20 rounded-2xl flex flex-col md:flex-row gap-6 text-left animate-in fade-in duration-300 shadow-3xs">
+          <div className="flex items-start gap-4 flex-1">
+            <span className="w-6 h-6 rounded-full bg-[#137333] text-white flex items-center justify-center font-black text-xs shrink-0 mt-0.5 shadow-sm">
+              14
+            </span>
+            <div className="space-y-1">
+              <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm uppercase tracking-wider">
+                État des Résultats & Trésorerie
+              </h4>
+              <p className="text-xs text-slate-500 leading-relaxed font-semibold">
+                Suivez en temps réel le Chiffre d'Affaires encaissé ou total, le coût de revient des formules d'aliments vendues (COGS) et la marge nette consolidée.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-start gap-4 flex-1 border-t md:border-t-0 md:border-l border-slate-200/65 pt-4 md:pt-0 md:pl-6">
+            <span className="w-6 h-6 rounded-full bg-[#137333] text-white flex items-center justify-center font-black text-xs shrink-0 mt-0.5 shadow-sm">
+              15
+            </span>
+            <div className="space-y-1">
+              <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm uppercase tracking-wider">
+                Suivi des Crédits & Avances Clients
+              </h4>
+              <p className="text-xs text-slate-500 leading-relaxed font-semibold">
+                Recouvrez les dettes de vos clients en enregistrant des paiements partiels directement depuis l'onglet des comptes débiteurs.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {activeTab === 'expenses' ? (
       <>

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Product, Invoice, Category, Boutique, UserRole, StockTransfer, Expense } from '../types';
-import { TrendingUp, AlertTriangle, Wallet, Package, ArrowUpRight, Filter, Calendar, Store, CreditCard, CheckCircle2, XCircle, ChevronRight, Clock, Lock, Unlock, Loader2, RefreshCw, Layers } from 'lucide-react';
+import { TrendingUp, AlertTriangle, Wallet, Package, ArrowUpRight, Filter, Calendar, Store, CreditCard, CheckCircle2, XCircle, ChevronRight, Clock, Lock, Unlock, Loader2, RefreshCw, Layers, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { toggleBoutiqueOpenStatus } from '../services/db';
 import { useNotifications } from './ui/Notifications';
@@ -44,6 +44,47 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [activeCategory, setActiveCategory] = useState<string>('Tous');
   const [timeRange, setTimeRange] = useState<TimeRange>('month');
   const [togglingBoutiqueId, setTogglingBoutiqueId] = useState<string | null>(null);
+
+  const [showAnnotations, setShowAnnotations] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('smart_agro_show_annotations');
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const handleToggleAnnotations = () => {
+    setShowAnnotations(prev => {
+      const newVal = !prev;
+      try {
+        localStorage.setItem('smart_agro_show_annotations', JSON.stringify(newVal));
+        window.dispatchEvent(new Event('storage_annotations_changed'));
+      } catch (e) {
+        console.warn('Failed to save annotation settings', e);
+      }
+      return newVal;
+    });
+  };
+
+  React.useEffect(() => {
+    const handleSync = () => {
+      try {
+        const saved = localStorage.getItem('smart_agro_show_annotations');
+        if (saved !== null) {
+          setShowAnnotations(JSON.parse(saved));
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    window.addEventListener('storage_annotations_changed', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener('storage_annotations_changed', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
+  }, []);
 
   const cleanRole = (userRole || '').toLowerCase().trim();
   const isAdmin = cleanRole === 'admin' || 
@@ -335,6 +376,30 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         {/* Central Pill Selector & Actions */}
         <div className="flex flex-wrap items-center gap-4">
+             {/* Annotations Toggle Switcher */}
+             <div className="flex items-center gap-2.5 bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800/80 px-3.5 py-1.5 rounded-full shadow-sm hover:border-emerald-500/50 hover:bg-white dark:hover:bg-slate-900 transition-all shrink-0">
+               <span className="relative flex h-2 w-2">
+                 <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${showAnnotations ? 'bg-emerald-400' : 'bg-slate-400'}`}></span>
+                 <span className={`relative inline-flex rounded-full h-2 w-2 ${showAnnotations ? 'bg-emerald-500' : 'bg-gray-400'}`}></span>
+               </span>
+               <button
+                 onClick={handleToggleAnnotations}
+                 className="flex items-center gap-2 font-black text-[10px] uppercase tracking-wider text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer select-none"
+               >
+                 {showAnnotations ? (
+                   <>
+                     <EyeOff className="w-3.5 h-3.5 text-emerald-600" />
+                     <span className="text-emerald-600 dark:text-emerald-450 font-extrabold">Annotations : On</span>
+                   </>
+                 ) : (
+                   <>
+                     <Eye className="w-3.5 h-3.5 text-slate-400" />
+                     <span className="text-slate-500">Annotations : Off</span>
+                   </>
+                 )}
+               </button>
+             </div>
+
              {/* Time range Pill Selector Matches the center option of template header */}
              {!isCaissier && (
              <div className="bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800/80 px-2.5 py-1.5 rounded-full shadow-sm flex items-center gap-1">
@@ -388,7 +453,40 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <ArrowUpRight className="w-3.5 h-3.5 text-white/80" />
                </button>
              )}
-             {/* --- ROW 1: PRECISE HIGH-END TEMPLATE METRIC CARDS --- */}
+       {/* Annotations for Dashboard */}
+      {showAnnotations && (
+        <div className="relative p-6 bg-emerald-50/45 dark:bg-emerald-950/10 border border-emerald-500/20 dark:border-emerald-900/30 rounded-[2rem] flex flex-col md:flex-row gap-6 text-left animate-in fade-in duration-300 shadow-3xs mb-4">
+          <div className="flex items-start gap-4">
+            <span className="w-6 h-6 rounded-full bg-[#137333] text-white flex items-center justify-center font-black text-xs shrink-0 mt-0.5 shadow-sm">
+              4
+            </span>
+            <div className="space-y-1">
+              <h4 className="font-extrabold text-slate-900 dark:text-emerald-450 text-xs sm:text-sm uppercase tracking-wider">
+                Analyse Temporelle & Filtres de Catégorie
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
+                Utilisez les sélecteurs de filtre en haut à droite pour affiner instantanément les rapports de vente, statistiques d'alertes et graphiques financiers.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-start gap-4 border-t md:border-t-0 md:border-l border-slate-200/65 dark:border-slate-800/60 pt-4 md:pt-0 md:pl-6">
+            <span className="w-6 h-6 rounded-full bg-[#137333] text-white flex items-center justify-center font-black text-xs shrink-0 mt-0.5 shadow-sm">
+              5
+            </span>
+            <div className="space-y-1">
+              <h4 className="font-extrabold text-slate-900 dark:text-emerald-450 text-xs sm:text-sm uppercase tracking-wider">
+                Indicateurs de Performance (KPI)
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
+                Ces fiches résument vos alertes de stock critiques, vos revenus consolidés et l'état opérationnel d'ouverture/fermeture de vos boutiques.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+            {/* --- ROW 1: PRECISE HIGH-END TEMPLATE METRIC CARDS --- */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch" id="dashboard-metric-cards-row">
         
         {isMagasinier ? (

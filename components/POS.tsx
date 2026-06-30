@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Product, CartItem, Invoice, Category, ProductVariant, Expense, Employee, Boutique, Customer, Provenderie, Payment } from '../types';
-import { Search, ShoppingCart, Plus, Trash2, CheckCircle, Receipt, X, Tag, TrendingDown, TrendingUp, Save, Edit, Loader2, AlertTriangle, User, DollarSign, Printer, ArrowRight, CreditCard } from 'lucide-react';
+import { Search, ShoppingCart, Plus, Trash2, CheckCircle, Receipt, X, Tag, TrendingDown, TrendingUp, Save, Edit, Loader2, AlertTriangle, User, DollarSign, Printer, ArrowRight, CreditCard, Eye, EyeOff } from 'lucide-react';
 import { useNotifications } from './ui/Notifications';
 import { saveEmployee, saveCustomer } from '../services/db';
 import { InvoiceTemplate } from './InvoiceTemplate';
@@ -45,6 +45,48 @@ const EXPENSE_CATEGORIES = [
 
 export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], expenses = [], customers, onCheckout, onAddExpense, onVoidLastSale, userRole = 'Admin', userPermissions = [], userBoutique = 'Toutes', boutiques = [], provenderies = [], companyName, userName, currentProvenderieId, categories = [] }) => {
   const { notify } = useNotifications();
+
+  const [showAnnotations, setShowAnnotations] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('smart_agro_show_annotations');
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const handleToggleAnnotations = () => {
+    setShowAnnotations(prev => {
+      const newVal = !prev;
+      try {
+        localStorage.setItem('smart_agro_show_annotations', JSON.stringify(newVal));
+        window.dispatchEvent(new Event('storage_annotations_changed'));
+      } catch (e) {
+        console.warn('Failed to save annotation settings', e);
+      }
+      return newVal;
+    });
+  };
+
+  useEffect(() => {
+    const handleSync = () => {
+      try {
+        const saved = localStorage.getItem('smart_agro_show_annotations');
+        if (saved !== null) {
+          setShowAnnotations(JSON.parse(saved));
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    window.addEventListener('storage_annotations_changed', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener('storage_annotations_changed', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
+  }, []);
+
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -766,19 +808,79 @@ export const POS: React.FC<POSProps> = ({ products, employees, invoices = [], ex
                   </h2>
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mt-1">Caisse principale active</p>
               </div>
-              <select 
-                  className={`bg-farm-50 dark:bg-farm-950/25 border border-farm-200/30 dark:border-farm-800/65 text-farm-800 dark:text-farm-400 text-xs font-black px-4 py-2 rounded-2xl outline-none hover:bg-farm-100 dark:hover:bg-farm-900/30 transition-all ${canSelectBoutique ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'}`}
-                  value={selectedBoutique}
-                  onChange={e => setSelectedBoutique(e.target.value)}
-                  disabled={!canSelectBoutique}
-              >
-                  {boutiques
-                    .filter(b => userBoutique === 'Toutes' || b.id === userBoutique || b.name === userBoutique)
-                    .map(b => (
-                      <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-              </select>
+              <div className="flex flex-wrap items-center gap-3">
+                 {/* Shared Annotation Toggle Switcher */}
+                 <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-xl shadow-xs hover:border-emerald-500/50 transition-all shrink-0">
+                    <span className="relative flex h-2 w-2">
+                      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${showAnnotations ? 'bg-emerald-400' : 'bg-slate-400'}`}></span>
+                      <span className={`relative inline-flex rounded-full h-2 w-2 ${showAnnotations ? 'bg-emerald-500' : 'bg-gray-400'}`}></span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleToggleAnnotations}
+                      className="flex items-center gap-1.5 font-black text-[10px] uppercase tracking-wider text-slate-600 hover:text-emerald-600 transition-colors cursor-pointer select-none"
+                    >
+                      {showAnnotations ? (
+                        <>
+                          <EyeOff className="w-3.5 h-3.5 text-emerald-600" />
+                          <span className="text-emerald-600 font-extrabold">Annotations : On</span>
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="text-slate-500">Annotations : Off</span>
+                        </>
+                      )}
+                    </button>
+                 </div>
+
+                 <select 
+                     className={`bg-farm-50 dark:bg-farm-950/25 border border-farm-200/30 dark:border-farm-800/65 text-farm-800 dark:text-farm-400 text-xs font-black px-4 py-2 rounded-2xl outline-none hover:bg-farm-100 dark:hover:bg-farm-900/30 transition-all ${canSelectBoutique ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'}`}
+                     value={selectedBoutique}
+                     onChange={e => setSelectedBoutique(e.target.value)}
+                     disabled={!canSelectBoutique}
+                 >
+                     {boutiques
+                       .filter(b => userBoutique === 'Toutes' || b.id === userBoutique || b.name === userBoutique)
+                       .map(b => (
+                         <option key={b.id} value={b.id}>{b.name}</option>
+                     ))}
+                 </select>
+              </div>
           </div>
+
+          {/* Annotations for POS */}
+          {showAnnotations && (
+            <div className="mb-4 p-5 bg-emerald-50/40 border border-emerald-500/20 rounded-2xl flex flex-col md:flex-row gap-6 text-left animate-in fade-in duration-300 shadow-3xs">
+              <div className="flex items-start gap-4 flex-1">
+                <span className="w-6 h-6 rounded-full bg-[#137333] text-white flex items-center justify-center font-black text-xs shrink-0 mt-0.5 shadow-sm">
+                  8
+                </span>
+                <div className="space-y-1">
+                  <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm uppercase tracking-wider">
+                    Panier de Caisse Tactile & Recherche Rapide
+                  </h4>
+                  <p className="text-xs text-slate-500 leading-relaxed font-semibold">
+                    Sélectionnez ou recherchez des articles pour alimenter le panier de caisse. Double-cliquez pour ajuster les quantités ou appliquer des remises.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-4 flex-1 border-t md:border-t-0 md:border-l border-slate-200/65 pt-4 md:pt-0 md:pl-6">
+                <span className="w-6 h-6 rounded-full bg-[#137333] text-white flex items-center justify-center font-black text-xs shrink-0 mt-0.5 shadow-sm">
+                  9
+                </span>
+                <div className="space-y-1">
+                  <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm uppercase tracking-wider">
+                    Règlements Multi-moyens & Dettes Clients
+                  </h4>
+                  <p className="text-xs text-slate-500 leading-relaxed font-semibold">
+                    Validez la vente en spécifiant l'acompte payé (espèces, Mobile Money, etc.) et suivez automatiquement le solde débiteur restant dû.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="flex gap-3 mb-4">
             <div className="relative flex-1">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />

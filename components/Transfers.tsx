@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Product, Boutique, StockTransfer, TransferItem } from '../types';
-import { Plus, Check, X, Search, Package, ArrowRight, Clock, CheckCircle2, XCircle, Eye, Printer, AlertTriangle } from 'lucide-react';
+import { Plus, Check, X, Search, Package, ArrowRight, Clock, CheckCircle2, XCircle, Eye, EyeOff, Printer, AlertTriangle } from 'lucide-react';
 import { saveTransfer, saveProduct } from '../services/db';
 import { useNotifications } from './ui/Notifications';
 
@@ -19,6 +19,48 @@ interface TransfersProps {
 
 export const Transfers: React.FC<TransfersProps> = ({ products, transfers, boutiques, userRole, userBoutique, userName, preSelectedProductId, onClearPreSelection, currentProvenderieId }) => {
   const { notify } = useNotifications();
+
+  const [showAnnotations, setShowAnnotations] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('smart_agro_show_annotations');
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const handleToggleAnnotations = () => {
+    setShowAnnotations(prev => {
+      const newVal = !prev;
+      try {
+        localStorage.setItem('smart_agro_show_annotations', JSON.stringify(newVal));
+        window.dispatchEvent(new Event('storage_annotations_changed'));
+      } catch (e) {
+        console.warn('Failed to save annotation settings', e);
+      }
+      return newVal;
+    });
+  };
+
+  React.useEffect(() => {
+    const handleSync = () => {
+      try {
+        const saved = localStorage.getItem('smart_agro_show_annotations');
+        if (saved !== null) {
+          setShowAnnotations(JSON.parse(saved));
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    window.addEventListener('storage_annotations_changed', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener('storage_annotations_changed', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
+  }, []);
+
   const [isCreating, setIsCreating] = useState(false);
   const [viewingTransfer, setViewingTransfer] = useState<StockTransfer | null>(null);
   const [confirmPartialTransfer, setConfirmPartialTransfer] = useState<StockTransfer | null>(null);
@@ -278,7 +320,31 @@ export const Transfers: React.FC<TransfersProps> = ({ products, transfers, bouti
           <h2 className="text-2xl font-bold font-display text-gray-900">Transferts de Stock</h2>
           <p className="text-sm text-gray-500 font-medium mt-1">Gérez les bons de transfert entre boutiques</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Shared Annotation Toggle Switcher */}
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-xl shadow-xs hover:border-emerald-500/50 transition-all shrink-0">
+             <span className="relative flex h-2 w-2">
+               <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${showAnnotations ? 'bg-emerald-400' : 'bg-slate-400'}`}></span>
+               <span className={`relative inline-flex rounded-full h-2 w-2 ${showAnnotations ? 'bg-emerald-500' : 'bg-gray-400'}`}></span>
+             </span>
+             <button
+               type="button"
+               onClick={handleToggleAnnotations}
+               className="flex items-center gap-1.5 font-black text-[10px] uppercase tracking-wider text-slate-600 hover:text-emerald-600 transition-colors cursor-pointer select-none"
+             >
+               {showAnnotations ? (
+                 <>
+                   <EyeOff className="w-3.5 h-3.5 text-emerald-600" />
+                   <span className="text-emerald-600 font-extrabold">Annotations : On</span>
+                 </>
+               ) : (
+                 <>
+                   <Eye className="w-3.5 h-3.5 text-slate-400" />
+                   <span className="text-slate-500">Annotations : Off</span>
+                 </>
+               )}
+             </button>
+          </div>
           {(userBoutique === 'Toutes' || userBoutique === 'Maison Mère') && (
             <button 
               onClick={() => setIsCreating(true)}
@@ -289,6 +355,39 @@ export const Transfers: React.FC<TransfersProps> = ({ products, transfers, bouti
           )}
         </div>
       </div>
+
+      {/* Annotations for Transfers */}
+      {showAnnotations && (
+        <div className="mx-6 mt-6 p-6 bg-emerald-50/40 border border-emerald-500/20 rounded-2xl flex flex-col md:flex-row gap-6 text-left animate-in fade-in duration-300 shadow-3xs shrink-0">
+          <div className="flex items-start gap-4 flex-1">
+            <span className="w-6 h-6 rounded-full bg-[#137333] text-white flex items-center justify-center font-black text-xs shrink-0 mt-0.5 shadow-sm">
+              10
+            </span>
+            <div className="space-y-1">
+              <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm uppercase tracking-wider">
+                Expédition & Validation de Transfert
+              </h4>
+              <p className="text-xs text-slate-500 leading-relaxed font-semibold">
+                Initiez des bons de transfert depuis la Maison Mère. Les boutiques destinataires doivent réceptionner et approuver le stock reçu (partiel ou complet) pour valider l'inventaire.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-start gap-4 flex-1 border-t md:border-t-0 md:border-l border-slate-200/65 pt-4 md:pt-0 md:pl-6">
+            <span className="w-6 h-6 rounded-full bg-[#137333] text-white flex items-center justify-center font-black text-xs shrink-0 mt-0.5 shadow-sm">
+              11
+            </span>
+            <div className="space-y-1">
+              <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm uppercase tracking-wider">
+                Suivi des Statuts & Historique
+              </h4>
+              <p className="text-xs text-slate-500 leading-relaxed font-semibold">
+                Filtrez les flux par boutique émettrice ou réceptrice et vérifiez l'état d'avancement des transferts ("En attente", "Validé", "Rejeté").
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row gap-4">
